@@ -2587,43 +2587,92 @@
                 if (intersect.distance > CONFIG.INTERACTION_DISTANCE) continue;
 
                 let obj = intersect.object;
-                while (obj.parent && !obj.userData.interactable && !obj.userData.type) {
+                while (obj.parent && !obj.userData.interactable && !obj.userData.type && !obj.userData.grabbable) {
                     obj = obj.parent;
                 }
 
-                // ESPRESSO MACHINE - Start making coffee
+                // ============================================
+                // PHYSICS-BASED COFFEE MAKING INTERACTIONS
+                // ============================================
+
+                // CUP DISPENSER - Spawn a new cup
+                if (obj.userData.type === 'cup_dispenser') {
+                    if (physicsState.grabbedObject) {
+                        showNotification('Hands Full!', 'Drop cup first');
+                        return;
+                    }
+                    const cupPos = new THREE.Vector3(obj.position.x, obj.position.y + 0.3, obj.position.z + 0.5);
+                    const newCup = spawnCup(cupPos);
+                    grabObject(newCup);
+                    showNotification('☕ Cup Ready!', 'Take to stations');
+
+                    // Generate order if none exists
+                    if (!currentOrder) {
+                        generateNewOrder();
+                    }
+                    return;
+                }
+
+                // ESPRESSO MACHINE - Pour espresso into held cup
                 if (obj.userData.type === 'espresso') {
-                    if (heldItems.length >= MAX_HELD_ITEMS) {
-                        showNotification('Hands Full!', 'Serve items first');
-                        return;
+                    if (physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                        startMiniGame('timing', 'espresso', () => {
+                            addContentsToCup(physicsState.grabbedObject, 'espresso');
+                            showNotification('☕ Espresso Added!', 'Continue building drink');
+                        });
+                    } else {
+                        showNotification('Need Cup!', 'Get cup from dispenser');
                     }
-                    if (gameState.activeOrders.length === 0) {
-                        showNotification('No Orders!', 'Wait for customers');
-                        return;
-                    }
-                    startMiniGame('timing', 'espresso', () => {
-                        const quality = miniGameState.quality;
-                        addHeldItem('espresso', quality);
-                        showQualityPopup(quality);
-                    });
                     return;
                 }
 
-                // MILK STATION - Froth milk for lattes
+                // MILK STATION - Add steamed milk to held cup
                 if (obj.userData.type === 'milk') {
-                    if (heldItems.length >= MAX_HELD_ITEMS) {
-                        showNotification('Hands Full!', 'Serve items first');
-                        return;
+                    if (physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                        startMiniGame('tap', 'milk', () => {
+                            addContentsToCup(physicsState.grabbedObject, 'milk');
+                            showNotification('🥛 Milk Added!', 'Continue building drink');
+                        });
+                    } else {
+                        showNotification('Need Cup!', 'Get cup from dispenser');
                     }
-                    startMiniGame('tap', 'milk', () => {
-                        const quality = miniGameState.quality;
-                        addHeldItem('milk', quality);
-                        showQualityPopup(quality);
-                    });
                     return;
                 }
 
-                // PASTRY DISPLAY - Grab pastries
+                // SYRUP STATION - Add syrup to held cup
+                if (obj.userData.type === 'syrup') {
+                    if (physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                        const syrupType = obj.userData.syrupType || 'vanilla';
+                        addContentsToCup(physicsState.grabbedObject, syrupType);
+                        showNotification(`🍯 ${syrupType} Added!`, 'Continue building drink');
+                        playSound('pour');
+                    } else {
+                        showNotification('Need Cup!', 'Get cup from dispenser');
+                    }
+                    return;
+                }
+
+                // SERVING WINDOW - Validate and serve the drink
+                if (obj.userData.type === 'serving_window') {
+                    if (physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                        serveOrder(physicsState.grabbedObject);
+                    } else {
+                        showNotification('Need Drink!', 'Make a coffee first');
+                    }
+                    return;
+                }
+
+                // TRASH BIN - Discard held item
+                if (obj.userData.type === 'trash') {
+                    if (physicsState.grabbedObject) {
+                        trashItem(physicsState.grabbedObject);
+                    } else {
+                        showNotification('Nothing to Trash', 'Grab an item first');
+                    }
+                    return;
+                }
+
+                // PASTRY DISPLAY - Grab pastries (old system, kept for compatibility)
                 if (obj.userData.type === 'pastry') {
                     if (heldItems.length >= MAX_HELD_ITEMS) {
                         showNotification('Hands Full!', 'Serve items first');
@@ -2642,7 +2691,7 @@
                     return;
                 }
 
-                // CUSTOMER - Serve held items
+                // CUSTOMER - Serve held items (old system for non-physics drinks)
                 if (obj.userData.type === 'customer') {
                     if (heldItems.length === 0) {
                         showNotification('Empty Hands!', 'Make something first');
