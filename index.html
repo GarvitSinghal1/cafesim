@@ -3242,13 +3242,67 @@
             const intersects = raycaster.intersectObjects(scene.children, true);
 
             let showPrompt = false;
+            let promptText = 'Press E to interact';
 
             for (const intersect of intersects) {
                 if (intersect.distance > CONFIG.INTERACTION_DISTANCE) continue;
 
                 let obj = intersect.object;
-                while (obj.parent && !obj.userData.interactable && !obj.userData.type) {
+                while (obj.parent && !obj.userData.interactable && !obj.userData.type && !obj.userData.grabbable) {
                     obj = obj.parent;
+                }
+
+                // Physics-grabbable object
+                if (obj.userData.grabbable) {
+                    if (physicsState.grabbedObject) {
+                        promptText = 'Click to drop';
+                    } else {
+                        promptText = 'Click to grab';
+                    }
+                    showPrompt = true;
+                    break;
+                }
+
+                // Cup dispenser
+                if (obj.userData.type === 'cup_dispenser') {
+                    promptText = 'Press E - Get Cup';
+                    showPrompt = true;
+                    break;
+                }
+
+                // Espresso machine (with cup held)
+                if (obj.userData.type === 'espresso' && physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                    promptText = 'Press E - Pour Espresso';
+                    showPrompt = true;
+                    break;
+                }
+
+                // Milk station (with cup held)
+                if (obj.userData.type === 'milk' && physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                    promptText = 'Press E - Add Milk';
+                    showPrompt = true;
+                    break;
+                }
+
+                // Syrup station (with cup held)
+                if (obj.userData.type === 'syrup' && physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                    promptText = `Press E - Add ${obj.userData.syrupType}`;
+                    showPrompt = true;
+                    break;
+                }
+
+                // Serving window (with cup held)
+                if (obj.userData.type === 'serving_window' && physicsState.grabbedObject && physicsState.grabbedObject.userData.isCup) {
+                    promptText = 'Press E - Serve Order';
+                    showPrompt = true;
+                    break;
+                }
+
+                // Trash (with cup held)
+                if (obj.userData.type === 'trash' && physicsState.grabbedObject) {
+                    promptText = 'Press E - Trash Item';
+                    showPrompt = true;
+                    break;
                 }
 
                 if (obj.userData.interactable || obj.userData.type) {
@@ -3257,7 +3311,262 @@
                 }
             }
 
-            document.getElementById('interact-prompt').style.display = showPrompt ? 'block' : 'none';
+            const promptEl = document.getElementById('interact-prompt');
+            promptEl.textContent = promptText;
+            promptEl.style.display = showPrompt ? 'block' : 'none';
+        }
+
+        // ============================================
+        // PHYSICS GRAB SYSTEM FUNCTIONS
+        // ============================================
+
+        function spawnCup(position) {
+            const cupGroup = new THREE.Group();
+
+            // Cup body
+            const cupMat = new THREE.MeshStandardMaterial({ color: 0xf5f5dc, roughness: 0.3 });
+            const cupGeom = new THREE.CylinderGeometry(0.12, 0.10, 0.25, 16);
+            const cup = new THREE.Mesh(cupGeom, cupMat);
+            cup.position.y = 0.125;
+            cupGroup.add(cup);
+
+            // Cup handle
+            const handleMat = new THREE.MeshStandardMaterial({ color: 0xf5f5dc, roughness: 0.3 });
+            const handleGeom = new THREE.TorusGeometry(0.05, 0.015, 8, 16, Math.PI);
+            const handle = new THREE.Mesh(handleGeom, handleMat);
+            handle.position.set(0.15, 0.12, 0);
+            handle.rotation.z = Math.PI / 2;
+            cupGroup.add(handle);
+
+            // Liquid inside (hidden initially)
+            const liquidMat = new THREE.MeshStandardMaterial({ color: 0x4a3728, transparent: true, opacity: 0 });
+            const liquidGeom = new THREE.CylinderGeometry(0.10, 0.08, 0.2, 16);
+            const liquid = new THREE.Mesh(liquidGeom, liquidMat);
+            liquid.position.y = 0.10;
+            liquid.name = 'liquid';
+            cupGroup.add(liquid);
+
+            cupGroup.position.copy(position);
+            cupGroup.userData = {
+                grabbable: true,
+                isCup: true,
+                cupInstance: new CoffeeCup(cupGroup)
+            };
+
+            scene.add(cupGroup);
+            physicsState.grabbableObjects.push(cupGroup);
+            activeCups.push(cupGroup);
+
+            return cupGroup;
+        }
+
+        function grabObject(object) {
+            if (physicsState.grabbedObject) return;
+
+            physicsState.grabbedObject = object;
+            physicsState.isGrabbing = true;
+
+            // Visual feedback
+            object.traverse(child => {
+                if (child.isMesh && child.material) {
+                    child.material.emissive = new THREE.Color(0x222222);
+                    child.material.emissiveIntensity = 0.3;
+                }
+            });
+
+            playSound('click');
+        }
+
+        function dropObject() {
+            if (!physicsState.grabbedObject) return;
+
+            const obj = physicsState.grabbedObject;
+
+            // Remove emissive
+            obj.traverse(child => {
+                if (child.isMesh && child.material && child.material.emissive) {
+                    child.material.emissiveIntensity = 0;
+                }
+            });
+
+            // Apply slight drop animation
+            const dropAnim = () => {
+                if (obj.position.y > 1.2) {
+                    obj.position.y -= 0.05;
+                    requestAnimationFrame(dropAnim);
+                }
+            };
+            dropAnim();
+
+            physicsState.grabbedObject = null;
+            physicsState.isGrabbing = false;
+
+            playSound('click');
+        }
+
+        function updateGrabbedObjectPosition() {
+            if (!physicsState.grabbedObject) return;
+
+            // Position object in front of camera
+            const offset = new THREE.Vector3(0, -0.2, -1);
+            offset.applyQuaternion(camera.quaternion);
+
+            physicsState.targetPosition.copy(camera.position).add(offset);
+
+            // Smooth follow (spring-like)
+            physicsState.grabbedObject.position.lerp(physicsState.targetPosition, 0.2);
+
+            // Slight rotation matching
+            physicsState.grabbedObject.rotation.y = camera.rotation.y;
+        }
+
+        function addContentsToCup(cupObj, contentType, amount) {
+            if (!cupObj.userData.isCup) return false;
+
+            const cupInstance = cupObj.userData.cupInstance;
+
+            switch (contentType) {
+                case 'espresso':
+                    cupInstance.addEspresso();
+                    break;
+                case 'milk':
+                    cupInstance.addMilk();
+                    break;
+                case 'vanilla':
+                case 'caramel':
+                case 'chocolate':
+                    cupInstance.addSyrup(contentType);
+                    break;
+            }
+
+            // Update liquid visual
+            const liquid = cupObj.getObjectByName('liquid');
+            if (liquid) {
+                liquid.material.opacity = cupInstance.fillLevel / 100;
+
+                // Color based on contents
+                let color = 0x4a3728; // espresso brown
+                if (cupInstance.contents.milk) color = 0x8b7355; // lighter with milk
+                if (cupInstance.contents.chocolate) color = 0x3d2817; // darker mocha
+                if (cupInstance.contents.vanilla) color = 0xa08060; // vanilla tint
+                if (cupInstance.contents.caramel) color = 0x8b6914; // caramel tint
+
+                liquid.material.color.setHex(color);
+            }
+
+            // Quality animation popup
+            if (cupInstance.quality >= 80) {
+                showQualityPopup('Good!', '#2ecc71');
+            } else if (cupInstance.quality >= 50) {
+                showQualityPopup('OK', '#f1c40f');
+            }
+
+            playSound('pour');
+            return true;
+        }
+
+        function serveOrder(cupObj) {
+            if (!cupObj.userData.isCup || !currentOrder) return false;
+
+            const cupInstance = cupObj.userData.cupInstance;
+
+            // Check if cup matches order
+            if (cupInstance.matchesOrder(currentOrder)) {
+                // Success!
+                const tip = Math.floor(cupInstance.quality / 10);
+                const payment = currentOrder.price + tip;
+
+                score += payment;
+                gameState.money += payment;
+                gameState.customersServed++;
+
+                showNotification('✨ Order Complete!', `+$${payment} (incl. $${tip} tip)`);
+                playSound('coin');
+
+                // Remove cup
+                scene.remove(cupObj);
+                const cupIdx = activeCups.indexOf(cupObj);
+                if (cupIdx > -1) activeCups.splice(cupIdx, 1);
+                const grabIdx = physicsState.grabbableObjects.indexOf(cupObj);
+                if (grabIdx > -1) physicsState.grabbableObjects.splice(grabIdx, 1);
+
+                if (physicsState.grabbedObject === cupObj) {
+                    physicsState.grabbedObject = null;
+                    physicsState.isGrabbing = false;
+                }
+
+                // Generate new order
+                generateNewOrder();
+                updateHUD();
+
+                return true;
+            } else {
+                // Wrong order
+                mistakes++;
+                showNotification('❌ Wrong Order!', 'Check the order ticket');
+                playSound('error');
+
+                if (mistakes >= 3) {
+                    endGame(false, 'Too many mistakes!');
+                }
+
+                return false;
+            }
+        }
+
+        function trashItem(obj) {
+            scene.remove(obj);
+
+            if (obj.userData.isCup) {
+                const cupIdx = activeCups.indexOf(obj);
+                if (cupIdx > -1) activeCups.splice(cupIdx, 1);
+            }
+
+            const grabIdx = physicsState.grabbableObjects.indexOf(obj);
+            if (grabIdx > -1) physicsState.grabbableObjects.splice(grabIdx, 1);
+
+            if (physicsState.grabbedObject === obj) {
+                physicsState.grabbedObject = null;
+                physicsState.isGrabbing = false;
+            }
+
+            playSound('trash');
+            showNotification('🗑️ Trashed', '');
+        }
+
+        function generateNewOrder() {
+            const orderIdx = Math.floor(Math.random() * COFFEE_ORDERS.length);
+            currentOrder = COFFEE_ORDERS[orderIdx];
+            orderTimer = 60; // 60 seconds per order
+
+            // Update order display
+            updateOrderDisplay();
+        }
+
+        function updateOrderDisplay() {
+            if (!currentOrder) return;
+
+            const ordersContainer = document.getElementById('orders-container');
+            ordersContainer.innerHTML = '';
+
+            const card = document.createElement('div');
+            card.className = 'order-card';
+            card.innerHTML = `
+                <div class="order-customer-name">Current Order</div>
+                <div class="order-items">${currentOrder.name}</div>
+                <div class="order-timer">
+                    <span>Requires:</span>
+                    <ul style="font-size: 0.9em; margin-top: 5px; padding-left: 15px;">
+                        ${Object.keys(currentOrder.requires).map(key => `<li>${key}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            ordersContainer.appendChild(card);
+        }
+
+        function playPourSound() {
+            // Use existing sound system
+            playSound('pour');
         }
 
         // ============================================
