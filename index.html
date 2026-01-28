@@ -1273,6 +1273,46 @@
             interactableObjects.push(displayCase);
             counterGroup.add(displayCase);
 
+            // ============================================
+            // PHYSICS COFFEE STATIONS
+            // ============================================
+
+            // Cup Dispenser
+            const cupDispenser = createCupDispenser();
+            cupDispenser.position.set(-3.2, 1.2, -5);
+            cupDispenser.userData = { type: 'cup_dispenser', interactable: true };
+            interactableObjects.push(cupDispenser);
+            counterGroup.add(cupDispenser);
+
+            // Syrup Bottles
+            const syrups = [
+                { type: 'vanilla', color: 0xf5e6d3, x: 1.2 },
+                { type: 'caramel', color: 0xc68e17, x: 1.5 },
+                { type: 'chocolate', color: 0x3c1414, x: 1.8 }
+            ];
+
+            syrups.forEach(syrup => {
+                const bottle = createSyrupBottle(syrup.color);
+                bottle.position.set(syrup.x, 1.2, -5.2);
+                bottle.userData = { type: 'syrup', syrupType: syrup.type, interactable: true };
+                interactableObjects.push(bottle);
+                counterGroup.add(bottle);
+            });
+
+            // Serving Window (on counter edge)
+            const servingWindow = createServingWindow();
+            servingWindow.position.set(3.5, 1.1, -4.2);
+            servingWindow.userData = { type: 'serving_window', interactable: true };
+            interactableObjects.push(servingWindow);
+            counterGroup.add(servingWindow);
+
+            // Trash Bin (beside counter)
+            const trashBin = createTrashBin();
+            trashBin.position.set(-3.8, 0, -3.5);
+            trashBin.userData = { type: 'trash', interactable: true };
+            interactableObjects.push(trashBin);
+            counterGroup.add(trashBin);
+
             cafeInterior.add(counterGroup);
         }
 
@@ -1397,6 +1437,128 @@
                 pastry.position.set(i, 0.1, 0);
                 group.add(pastry);
             }
+
+            return group;
+        }
+
+        function createCupDispenser() {
+            const group = new THREE.Group();
+
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.8, roughness: 0.2 });
+            const cupMat = new THREE.MeshStandardMaterial({ color: 0xf5f5dc, roughness: 0.5 });
+
+            // Dispenser cylinder
+            const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.5, 16), metalMat);
+            cylinder.position.y = 0.25;
+            group.add(cylinder);
+
+            // Cup stack inside
+            for (let i = 0; i < 5; i++) {
+                const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.08, 0.06, 12), cupMat);
+                cup.position.y = 0.05 + i * 0.05;
+                group.add(cup);
+            }
+
+            // Base
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.22, 0.08, 16), metalMat);
+            group.add(base);
+
+            // Label
+            const label = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.15, 0.08),
+                new THREE.MeshStandardMaterial({ color: 0x00aa00 })
+            );
+            label.position.set(0, 0.25, 0.16);
+            group.add(label);
+
+            return group;
+        }
+
+        function createSyrupBottle(color) {
+            const group = new THREE.Group();
+
+            const bottleMat = new THREE.MeshStandardMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.8,
+                roughness: 0.1
+            });
+            const capMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+
+            // Bottle body
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.2, 12), bottleMat);
+            body.position.y = 0.1;
+            group.add(body);
+
+            // Neck
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.08, 8), bottleMat);
+            neck.position.y = 0.24;
+            group.add(neck);
+
+            // Cap/pump
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.05, 8), capMat);
+            cap.position.y = 0.30;
+            group.add(cap);
+
+            // Pump nozzle
+            const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.04, 6), capMat);
+            nozzle.position.set(0.03, 0.28, 0);
+            nozzle.rotation.z = Math.PI / 2;
+            group.add(nozzle);
+
+            return group;
+        }
+
+        function createServingWindow() {
+            const group = new THREE.Group();
+
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b7355 });
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.6 });
+            const signMat = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
+
+            // Tray
+            const tray = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 0.5), metalMat);
+            group.add(tray);
+
+            // Frame
+            const backFrame = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.05), woodMat);
+            backFrame.position.set(0, 0.2, -0.25);
+            group.add(backFrame);
+
+            // Sign "SERVE HERE"
+            const sign = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.02), signMat);
+            sign.position.set(0, 0.35, -0.22);
+            group.add(sign);
+
+            // Bell
+            const bell = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), metalMat);
+            bell.position.set(0.2, 0.08, 0);
+            bell.scale.y = 0.7;
+            group.add(bell);
+
+            return group;
+        }
+
+        function createTrashBin() {
+            const group = new THREE.Group();
+
+            const binMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            const lidMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+
+            // Bin body
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.22, 0.6, 12), binMat);
+            body.position.y = 0.3;
+            group.add(body);
+
+            // Lid
+            const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.05, 12), lidMat);
+            lid.position.y = 0.625;
+            group.add(lid);
+
+            // Swing door
+            const door = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.03, 0.25), lidMat);
+            door.position.set(0, 0.66, 0);
+            group.add(door);
 
             return group;
         }
@@ -2190,6 +2352,15 @@
                 case 'error':
                     osc.frequency.value = 200;
                     gain.gain.value = 0.1;
+                    break;
+                case 'pour':
+                    osc.frequency.value = 300;
+                    osc.type = 'sawtooth';
+                    gain.gain.value = 0.04;
+                    break;
+                case 'trash':
+                    osc.frequency.value = 150;
+                    gain.gain.value = 0.06;
                     break;
             }
 
@@ -3647,6 +3818,9 @@
 
             // Update mini-game even when game is sort of paused
             updateMiniGame();
+
+            // Update physics grabbed object position
+            updateGrabbedObjectPosition();
 
             prevTime = time;
 
