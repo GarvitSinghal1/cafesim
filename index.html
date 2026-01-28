@@ -1,0 +1,3332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaféVibe - Cozy Café Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #1a1410;
+            color: #f5e6d3;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #blocker {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(20, 15, 10, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .menu-container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+        }
+
+        .game-title {
+            font-size: 4em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff9f43, #ee5a24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 0 40px rgba(255, 159, 67, 0.3);
+        }
+
+        .game-subtitle {
+            font-size: 1.2em;
+            color: #a89485;
+            margin-bottom: 40px;
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .mode-btn {
+            padding: 25px 40px;
+            border: none;
+            border-radius: 15px;
+            font-family: inherit;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .mode-btn.cozy {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white;
+        }
+
+        .mode-btn.competitive {
+            background: linear-gradient(135deg, #d63031, #e17055);
+            color: white;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .mode-desc {
+            font-size: 0.85em;
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .instructions h3 {
+            color: #ff9f43;
+            margin-bottom: 10px;
+        }
+
+        .instructions p {
+            font-size: 0.9em;
+            color: #a89485;
+            line-height: 1.6;
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            display: none;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .hud-panel {
+            background: rgba(20, 15, 10, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px 20px;
+            border: 1px solid rgba(255, 159, 67, 0.2);
+        }
+
+        .hud-stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+
+        .hud-icon {
+            font-size: 1.3em;
+        }
+
+        .hud-value {
+            font-weight: 700;
+            font-size: 1.2em;
+            color: #ff9f43;
+        }
+
+        .hud-label {
+            font-size: 0.8em;
+            color: #a89485;
+        }
+
+        /* Crosshair */
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: none;
+            z-index: 60;
+            pointer-events: none;
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        #crosshair::before {
+            width: 2px;
+            height: 6px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #crosshair::after {
+            width: 6px;
+            height: 2px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Interaction prompt */
+        #interact-prompt {
+            position: fixed;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 15, 10, 0.9);
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 159, 67, 0.3);
+            display: none;
+            z-index: 55;
+        }
+
+        #interact-prompt span {
+            color: #ff9f43;
+            font-weight: 700;
+        }
+
+        /* Orders panel */
+        #orders-panel {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            width: 250px;
+            display: none;
+            z-index: 50;
+        }
+
+        .order-card {
+            background: rgba(20, 15, 10, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ff9f43;
+        }
+
+        .order-customer {
+            font-weight: 600;
+            color: #ff9f43;
+        }
+
+        .order-items {
+            font-size: 0.9em;
+            color: #d4c4b5;
+            margin-top: 5px;
+        }
+
+        .order-timer {
+            font-size: 0.8em;
+            color: #a89485;
+            margin-top: 5px;
+        }
+
+        /* Shop modal */
+        #shop-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .shop-content {
+            background: #1a1410;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 159, 67, 0.3);
+        }
+
+        .shop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .shop-title {
+            font-size: 1.8em;
+            color: #ff9f43;
+        }
+
+        .shop-close {
+            background: none;
+            border: none;
+            color: #a89485;
+            font-size: 2em;
+            cursor: pointer;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .shop-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .shop-item:hover {
+            border-color: rgba(255, 159, 67, 0.5);
+            transform: translateY(-3px);
+        }
+
+        .shop-item.owned {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .shop-item-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .shop-item-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .shop-item-desc {
+            font-size: 0.8em;
+            color: #a89485;
+            margin-bottom: 10px;
+        }
+
+        .shop-item-price {
+            color: #ff9f43;
+            font-weight: 700;
+        }
+
+        /* Music selector */
+        #music-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(20, 15, 10, 0.9);
+            border-radius: 12px;
+            padding: 15px;
+            display: none;
+            z-index: 50;
+            pointer-events: auto;
+        }
+
+        .music-title {
+            font-size: 0.9em;
+            color: #ff9f43;
+            margin-bottom: 10px;
+        }
+
+        .music-tracks {
+            display: flex;
+            gap: 8px;
+        }
+
+        .music-track {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 159, 67, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .music-track:hover,
+        .music-track.active {
+            border-color: #ff9f43;
+            background: rgba(255, 159, 67, 0.2);
+        }
+
+        .volume-control {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-control input {
+            flex: 1;
+            accent-color: #ff9f43;
+        }
+
+        /* Pause menu */
+        #pause-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(20, 15, 10, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+        }
+
+        .pause-content {
+            text-align: center;
+        }
+
+        .pause-title {
+            font-size: 3em;
+            color: #ff9f43;
+            margin-bottom: 30px;
+        }
+
+        .pause-btn {
+            display: block;
+            width: 200px;
+            margin: 10px auto;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            color: #f5e6d3;
+        }
+
+        .pause-btn:hover {
+            background: rgba(255, 159, 67, 0.3);
+        }
+
+        /* Notification */
+        #notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 15, 10, 0.95);
+            padding: 20px 40px;
+            border-radius: 15px;
+            border: 2px solid #ff9f43;
+            display: none;
+            z-index: 400;
+            text-align: center;
+        }
+
+        .notif-title {
+            font-size: 1.5em;
+            color: #ff9f43;
+            margin-bottom: 10px;
+        }
+
+        /* Game over */
+        #game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(20, 15, 10, 0.98);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+        }
+
+        .game-over-content {
+            text-align: center;
+        }
+
+        .game-over-title {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .game-over-title.win {
+            color: #00b894;
+        }
+
+        .game-over-title.lose {
+            color: #d63031;
+        }
+
+        .game-over-stats {
+            margin: 30px 0;
+            font-size: 1.2em;
+            color: #a89485;
+        }
+
+        /* Loading */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1410;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-text {
+            color: #ff9f43;
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+
+        .loading-bar {
+            width: 300px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .loading-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff9f43, #ee5a24);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Mini-game overlay */
+        #minigame-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 150;
+        }
+
+        .minigame-container {
+            background: rgba(20, 15, 10, 0.95);
+            border-radius: 20px;
+            padding: 30px 50px;
+            text-align: center;
+            border: 2px solid rgba(255, 159, 67, 0.5);
+        }
+
+        .minigame-title {
+            font-size: 1.5em;
+            color: #ff9f43;
+            margin-bottom: 20px;
+        }
+
+        .minigame-instruction {
+            color: #a89485;
+            margin-bottom: 20px;
+        }
+
+        /* Timing bar mini-game */
+        .timing-bar {
+            width: 300px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px auto;
+        }
+
+        .timing-target {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            border-radius: 15px;
+        }
+
+        .timing-marker {
+            position: absolute;
+            width: 6px;
+            height: 100%;
+            background: #fff;
+            border-radius: 3px;
+            top: 0;
+            transition: left 0.05s linear;
+        }
+
+        /* Tap meter mini-game */
+        .tap-meter {
+            width: 300px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px auto;
+        }
+
+        .tap-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #9b59b6);
+            border-radius: 15px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .tap-count {
+            font-size: 2em;
+            color: #ff9f43;
+            margin: 10px 0;
+        }
+
+        /* Held item indicator */
+        #held-item {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 15, 10, 0.9);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 159, 67, 0.5);
+            display: none;
+            z-index: 60;
+            text-align: center;
+        }
+
+        .held-item-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .held-item-name {
+            color: #ff9f43;
+            font-weight: 600;
+        }
+
+        /* Quality popup */
+        #quality-popup {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 200;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .quality-perfect {
+            color: #00b894;
+        }
+
+        .quality-good {
+            color: #fdcb6e;
+        }
+
+        .quality-ok {
+            color: #e17055;
+        }
+
+        .quality-bad {
+            color: #d63031;
+        }
+
+        /* Customer queue indicator */
+        .customer-indicator {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 15, 10, 0.9);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            white-space: nowrap;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="loading">
+        <div class="game-title">CaféVibe</div>
+        <div class="loading-text">Brewing your experience...</div>
+        <div class="loading-bar">
+            <div class="loading-fill" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <div id="blocker">
+        <div class="menu-container">
+            <h1 class="game-title">☕ CaféVibe</h1>
+            <p class="game-subtitle">Your cozy autumn café awaits</p>
+
+            <div class="mode-buttons">
+                <button class="mode-btn cozy" onclick="startGame('cozy')">
+                    🍂 Cozy Mode
+                    <div class="mode-desc">Relaxed vibes, no stress</div>
+                </button>
+                <button class="mode-btn competitive" onclick="startGame('competitive')">
+                    🔥 Competitive
+                    <div class="mode-desc">Full management challenge</div>
+                </button>
+            </div>
+
+            <div class="instructions">
+                <h3>How to Play</h3>
+                <p>
+                    <strong>WASD</strong> - Move around |
+                    <strong>Mouse</strong> - Look around<br>
+                    <strong>E</strong> - Interact |
+                    <strong>Tab</strong> - Open Shop |
+                    <strong>Esc</strong> - Pause
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div class="hud-row">
+            <div class="hud-panel">
+                <div class="hud-stat">
+                    <span class="hud-icon">💰</span>
+                    <div>
+                        <div class="hud-value" id="money-display">$100</div>
+                        <div class="hud-label">Balance</div>
+                    </div>
+                </div>
+                <div class="hud-stat">
+                    <span class="hud-icon">⭐</span>
+                    <div>
+                        <div class="hud-value" id="rating-display">5.0</div>
+                        <div class="hud-label">Rating</div>
+                    </div>
+                </div>
+                <div class="hud-stat">
+                    <span class="hud-icon">👥</span>
+                    <div>
+                        <div class="hud-value" id="served-display">0</div>
+                        <div class="hud-label">Served Today</div>
+                    </div>
+                </div>
+            </div>
+            <div id="mode-indicator" class="hud-panel" style="display:none;">
+                <span id="mode-text">Cozy Mode</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="crosshair"></div>
+
+    <div id="interact-prompt">
+        Press <span>E</span> to interact
+    </div>
+
+    <div id="orders-panel"></div>
+
+    <div id="music-panel">
+        <div class="music-title">🎵 Background Music</div>
+        <div class="music-tracks">
+            <div class="music-track active" data-track="0" title="Autumn Breeze">🍂</div>
+            <div class="music-track" data-track="1" title="Rainy Café">🌧️</div>
+            <div class="music-track" data-track="2" title="Cozy Evening">🌙</div>
+            <div class="music-track" data-track="3" title="Morning Coffee">☀️</div>
+        </div>
+        <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" id="volume-slider" min="0" max="100" value="30">
+        </div>
+    </div>
+
+    <div id="shop-modal">
+        <div class="shop-content">
+            <div class="shop-header">
+                <h2 class="shop-title">☕ Café Upgrades</h2>
+                <button class="shop-close" onclick="closeShop()">&times;</button>
+            </div>
+            <div class="shop-grid" id="shop-grid"></div>
+        </div>
+    </div>
+
+    <div id="pause-menu">
+        <div class="pause-content">
+            <h1 class="pause-title">Paused</h1>
+            <button class="pause-btn" onclick="resumeGame()">Resume</button>
+            <button class="pause-btn" onclick="openShop()">Shop</button>
+            <button class="pause-btn" onclick="restartGame()">Restart</button>
+            <button class="pause-btn" onclick="quitToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <div id="notification">
+        <div class="notif-title" id="notif-title"></div>
+        <div id="notif-text"></div>
+    </div>
+
+    <div id="game-over">
+        <div class="game-over-content">
+            <h1 class="game-over-title" id="game-over-title">Game Over</h1>
+            <div class="game-over-stats" id="game-over-stats"></div>
+            <button class="pause-btn" onclick="restartGame()">Play Again</button>
+            <button class="pause-btn" onclick="quitToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <!-- Mini-game overlay -->
+    <div id="minigame-overlay">
+        <div class="minigame-container">
+            <div class="minigame-title" id="minigame-title">Making Espresso</div>
+            <div class="minigame-instruction" id="minigame-instruction">Press E at the right moment!</div>
+
+            <!-- Timing bar (for espresso) -->
+            <div class="timing-bar" id="timing-bar">
+                <div class="timing-target" id="timing-target"></div>
+                <div class="timing-marker" id="timing-marker"></div>
+            </div>
+
+            <!-- Tap meter (for milk) -->
+            <div class="tap-meter" id="tap-meter" style="display: none;">
+                <div class="tap-fill" id="tap-fill"></div>
+            </div>
+            <div class="tap-count" id="tap-count" style="display: none;">TAP E!</div>
+        </div>
+    </div>
+
+    <!-- Held item indicator -->
+    <div id="held-item">
+        <div class="held-item-icon" id="held-item-icon">☕</div>
+        <div class="held-item-name" id="held-item-name">Espresso</div>
+    </div>
+
+    <!-- Quality popup -->
+    <div id="quality-popup">PERFECT!</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+
+        // ============================================
+        // CAFÉVIBE - 3D First-Person Café Management
+        // ============================================
+
+        // Game Configuration
+        const CONFIG = {
+            MOVE_SPEED: 5,
+            LOOK_SPEED: 0.002,
+            INTERACTION_DISTANCE: 3,
+            CUSTOMER_SPAWN_INTERVAL: { cozy: 8000, competitive: 5000 },
+            CUSTOMER_PATIENCE: { cozy: Infinity, competitive: 60 },
+            STARTING_MONEY: 100,
+            WIN_GOAL: 1000,
+            BANKRUPTCY_THRESHOLD: -50
+        };
+
+        // Menu Items
+        const MENU_ITEMS = [
+            { id: 'espresso', name: 'Espresso', basePrice: 3, prepTime: 2000, unlocked: true },
+            { id: 'latte', name: 'Café Latte', basePrice: 5, prepTime: 3000, unlocked: true },
+            { id: 'cappuccino', name: 'Cappuccino', basePrice: 5, prepTime: 3000, unlocked: true },
+            { id: 'mocha', name: 'Mocha', basePrice: 6, prepTime: 3500, unlocked: false },
+            { id: 'matcha', name: 'Matcha Latte', basePrice: 6, prepTime: 3500, unlocked: false },
+            { id: 'coldBrew', name: 'Cold Brew', basePrice: 5, prepTime: 2500, unlocked: false },
+            { id: 'croissant', name: 'Croissant', basePrice: 4, prepTime: 1500, unlocked: true },
+            { id: 'muffin', name: 'Muffin', basePrice: 3, prepTime: 1000, unlocked: true },
+            { id: 'cake', name: 'Slice of Cake', basePrice: 6, prepTime: 1500, unlocked: false }
+        ];
+
+        // Power-ups/Upgrades
+        const UPGRADES = [
+            { id: 'speedBoost', name: 'Quick Hands', desc: 'Faster preparation', price: 50, icon: '⚡', effect: { prepSpeed: 1.5 } },
+            { id: 'tipBoost', name: 'Charming Service', desc: '+20% tips', price: 75, icon: '💝', effect: { tipMultiplier: 1.2 } },
+            { id: 'unlockMocha', name: 'Mocha Recipe', desc: 'Unlock Mocha', price: 40, icon: '🍫', effect: { unlockItem: 'mocha' } },
+            { id: 'unlockMatcha', name: 'Matcha Recipe', desc: 'Unlock Matcha', price: 50, icon: '🍵', effect: { unlockItem: 'matcha' } },
+            { id: 'unlockColdBrew', name: 'Cold Brew Recipe', desc: 'Unlock Cold Brew', price: 45, icon: '🧊', effect: { unlockItem: 'coldBrew' } },
+            { id: 'unlockCake', name: 'Cake Recipe', desc: 'Unlock Cake', price: 60, icon: '🎂', effect: { unlockItem: 'cake' } },
+            { id: 'cozyLights', name: 'Cozy Lighting', desc: 'Warmer atmosphere', price: 80, icon: '💡', effect: { satisfaction: 1.1 } },
+            { id: 'plants', name: 'Potted Plants', desc: 'Better ambiance', price: 60, icon: '🌿', effect: { satisfaction: 1.1 } },
+            { id: 'dailySpecial', name: 'Daily Specials', desc: '+30% on special items', price: 100, icon: '📋', effect: { dailySpecials: true } }
+        ];
+
+        // Customer Archetypes
+        const CUSTOMER_TYPES = {
+            chill: { name: 'Chill Customer', patience: 1.5, tipRange: [0.15, 0.25], reviewBias: 0.5, color: 0x6c5ce7 },
+            regular: { name: 'Regular', patience: 1, tipRange: [0.10, 0.20], reviewBias: 0, color: 0x74b9ff },
+            impatient: { name: 'Impatient', patience: 0.5, tipRange: [0.05, 0.15], reviewBias: -0.3, color: 0xe17055 },
+            critic: { name: 'Food Critic', patience: 1, tipRange: [0, 0.30], reviewBias: 0, color: 0xfdcb6e },
+            scammer: { name: 'Scammer', patience: 1, tipRange: [0, 0], reviewBias: -1, color: 0xd63031, competitiveOnly: true }
+        };
+
+        // Game State
+        const gameState = {
+            mode: null,
+            isPaused: false,
+            isPlaying: false,
+            money: CONFIG.STARTING_MONEY,
+            rating: 5.0,
+            totalReviews: 0,
+            customersServed: 0,
+            dayNumber: 1,
+            activeOrders: [],
+            customers: [],
+            ownedUpgrades: [],
+            menuPrices: {},
+            modifiers: {
+                prepSpeed: 1,
+                tipMultiplier: 1,
+                satisfactionMultiplier: 1,
+                dailySpecials: false
+            },
+            todaysSpecial: null
+        };
+
+        // Three.js globals
+        let scene, camera, renderer, controls;
+        let clock, raycaster, mouse;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let prevTime = performance.now();
+
+        // Game objects
+        let cafeInterior = null;
+        let customerPool = [];
+        let interactableObjects = [];
+        let particles = { leaves: null, rain: null, steam: [] };
+
+        // Mini-game state
+        let miniGameState = {
+            active: false,
+            type: null, // 'timing' or 'tap'
+            itemType: null, // what we're making
+            markerPos: 0,
+            markerDirection: 1,
+            targetStart: 35,
+            targetEnd: 65,
+            tapProgress: 0,
+            tapRequired: 15,
+            quality: 0,
+            callback: null
+        };
+
+        // ============================================
+        // PHYSICS GRAB SYSTEM
+        // ============================================
+
+        let physicsState = {
+            grabbedObject: null,
+            grabOffset: new THREE.Vector3(),
+            isGrabbing: false,
+            targetPosition: new THREE.Vector3(),
+            grabbableObjects: [],
+            stations: {}
+        };
+
+        // Coffee drink orders for physics game
+        const COFFEE_ORDERS = [
+            { name: 'Espresso', requires: { espresso: true }, price: 3 },
+            { name: 'Latte', requires: { espresso: true, milk: true }, price: 5 },
+            { name: 'Cappuccino', requires: { espresso: true, milk: true }, price: 5 },
+            { name: 'Vanilla Latte', requires: { espresso: true, milk: true, vanilla: true }, price: 6 },
+            { name: 'Caramel Macchiato', requires: { espresso: true, milk: true, caramel: true }, price: 6 },
+            { name: 'Mocha', requires: { espresso: true, milk: true, chocolate: true }, price: 6 }
+        ];
+
+        // Cup state for physics-based drinks
+        class CoffeeCup {
+            constructor(mesh) {
+                this.mesh = mesh;
+                this.contents = {
+                    espresso: false,
+                    milk: false,
+                    vanilla: false,
+                    caramel: false,
+                    chocolate: false
+                };
+                this.fillLevel = 0;  // 0-100
+                this.quality = 100;  // Decreases if overfilled or spilled
+                this.isComplete = false;
+            }
+
+            addEspresso() {
+                if (!this.contents.espresso) {
+                    this.contents.espresso = true;
+                    this.fillLevel += 30;
+                    this.checkOverflow();
+                }
+            }
+
+            addMilk() {
+                if (!this.contents.milk) {
+                    this.contents.milk = true;
+                    this.fillLevel += 50;
+                    this.checkOverflow();
+                }
+            }
+
+            addSyrup(type) {
+                if (!this.contents[type]) {
+                    this.contents[type] = true;
+                    this.fillLevel += 10;
+                    this.checkOverflow();
+                }
+            }
+
+            checkOverflow() {
+                if (this.fillLevel > 100) {
+                    this.quality -= (this.fillLevel - 100);
+                    this.fillLevel = 100;
+                }
+            }
+
+            matchesOrder(order) {
+                for (let key in order.requires) {
+                    if (order.requires[key] !== this.contents[key]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        // Active cups in the game
+        let activeCups = [];
+        let currentOrder = null;
+        let orderTimer = 0;
+        let score = 0;
+        let mistakes = 0;
+
+        // Held items
+        let heldItems = [];
+        const MAX_HELD_ITEMS = 2;
+
+        // Queue positions for customers
+        const QUEUE_POSITIONS = [
+            { x: 0, z: 2 },
+            { x: -1, z: 3 },
+            { x: 1, z: 3 },
+            { x: -0.5, z: 4 },
+            { x: 0.5, z: 4 }
+        ];
+
+        // Audio
+        let audioContext, masterGain;
+        let bgMusic = null;
+        let ambientSounds = {};
+
+        // Initialize the game
+        async function init() {
+            updateLoadingProgress(10);
+
+            // Setup Three.js
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1410);
+            scene.fog = new THREE.FogExp2(0x1a1410, 0.02);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.6, 5);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            updateLoadingProgress(20);
+
+            // Build the café
+            await buildCafe();
+            updateLoadingProgress(60);
+
+            // Setup lighting
+            setupLighting();
+            updateLoadingProgress(70);
+
+            // Create particle systems
+            createParticleSystems();
+            updateLoadingProgress(80);
+
+            // Setup audio
+            await setupAudio();
+            updateLoadingProgress(90);
+
+            // Event listeners
+            setupEventListeners();
+
+            // Initialize menu prices
+            MENU_ITEMS.forEach(item => {
+                gameState.menuPrices[item.id] = item.basePrice;
+            });
+
+            updateLoadingProgress(100);
+
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 500);
+
+            // Start render loop
+            animate();
+        }
+
+        function updateLoadingProgress(percent) {
+            document.querySelector('.loading-fill').style.width = percent + '%';
+        }
+
+        // ============================================
+        // CAFÉ BUILDING
+        // ============================================
+
+        async function buildCafe() {
+            cafeInterior = new THREE.Group();
+
+            // Floor
+            const floorGeom = new THREE.PlaneGeometry(12, 15);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x4a3728,
+                roughness: 0.8
+            });
+            const floor = new THREE.Mesh(floorGeom, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            cafeInterior.add(floor);
+
+            // Walls
+            const wallMat = new THREE.MeshStandardMaterial({
+                color: 0x8b7355,
+                roughness: 0.9
+            });
+
+            // Back wall
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(12, 4, 0.2), wallMat);
+            backWall.position.set(0, 2, -7.5);
+            cafeInterior.add(backWall);
+
+            // Side walls
+            const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4, 15), wallMat);
+            leftWall.position.set(-6, 2, 0);
+            cafeInterior.add(leftWall);
+
+            const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4, 15), wallMat);
+            rightWall.position.set(6, 2, 0);
+            cafeInterior.add(rightWall);
+
+            // Front wall with door opening
+            const frontWallLeft = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 0.2), wallMat);
+            frontWallLeft.position.set(-4, 2, 7.5);
+            cafeInterior.add(frontWallLeft);
+
+            const frontWallRight = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 0.2), wallMat);
+            frontWallRight.position.set(4, 2, 7.5);
+            cafeInterior.add(frontWallRight);
+
+            const frontWallTop = new THREE.Mesh(new THREE.BoxGeometry(4, 1.5, 0.2), wallMat);
+            frontWallTop.position.set(0, 3.25, 7.5);
+            cafeInterior.add(frontWallTop);
+
+            // Ceiling
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(12, 15),
+                new THREE.MeshStandardMaterial({ color: 0x6b5344, side: THREE.DoubleSide }));
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.y = 4;
+            cafeInterior.add(ceiling);
+
+            // Counter
+            buildCounter();
+
+            // Tables and chairs
+            buildSeating();
+
+            // Windows
+            buildWindows();
+
+            // Decorations
+            buildDecorations();
+
+            scene.add(cafeInterior);
+
+            // Build exterior
+            buildExterior();
+        }
+
+        function buildCounter() {
+            const counterGroup = new THREE.Group();
+
+            // Main counter
+            const counterMat = new THREE.MeshStandardMaterial({ color: 0x5d4e37, roughness: 0.6 });
+            const counter = new THREE.Mesh(new THREE.BoxGeometry(8, 1.1, 1.2), counterMat);
+            counter.position.set(0, 0.55, -5);
+            counter.castShadow = true;
+            counter.receiveShadow = true;
+            counterGroup.add(counter);
+
+            // Counter top
+            const topMat = new THREE.MeshStandardMaterial({ color: 0x3d3d3d, roughness: 0.3 });
+            const counterTop = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.1, 1.4), topMat);
+            counterTop.position.set(0, 1.15, -5);
+            counterGroup.add(counterTop);
+
+            // Espresso machine
+            const espressoMachine = createEspressoMachine();
+            espressoMachine.position.set(-2, 1.2, -5);
+            espressoMachine.userData = { type: 'espresso', interactable: true };
+            interactableObjects.push(espressoMachine);
+            counterGroup.add(espressoMachine);
+
+            // Milk frother station
+            const milkStation = createMilkStation();
+            milkStation.position.set(-0.8, 1.2, -5);
+            milkStation.userData = { type: 'milk', interactable: true };
+            interactableObjects.push(milkStation);
+            counterGroup.add(milkStation);
+
+            // Register
+            const register = createRegister();
+            register.position.set(2, 1.2, -4.8);
+            register.userData = { type: 'register', interactable: true };
+            interactableObjects.push(register);
+            counterGroup.add(register);
+
+            // Display case (for grabbing pastries)
+            const displayCase = createDisplayCase();
+            displayCase.position.set(0.5, 1.2, -4.6);
+            displayCase.userData = { type: 'pastry', interactable: true };
+            interactableObjects.push(displayCase);
+            counterGroup.add(displayCase);
+
+            cafeInterior.add(counterGroup);
+        }
+
+        function createEspressoMachine() {
+            const group = new THREE.Group();
+
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, metalness: 0.8, roughness: 0.2 });
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.9, roughness: 0.1 });
+
+            // Main body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.5), bodyMat);
+            body.position.y = 0.3;
+            group.add(body);
+
+            // Top
+            const top = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.1, 0.55), metalMat);
+            top.position.y = 0.65;
+            group.add(top);
+
+            // Portafilter holders
+            for (let i = -0.2; i <= 0.2; i += 0.4) {
+                const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.15, 8), metalMat);
+                holder.position.set(i, 0.1, 0.25);
+                group.add(holder);
+            }
+
+            // Steam wand
+            const wand = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.2, 6), metalMat);
+            wand.position.set(0.4, 0.2, 0.1);
+            wand.rotation.z = 0.3;
+            group.add(wand);
+
+            return group;
+        }
+
+        function createMilkStation() {
+            const group = new THREE.Group();
+
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.9, roughness: 0.1 });
+            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.4 });
+
+            // Frother base
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.4, 8), metalMat);
+            base.position.y = 0.2;
+            group.add(base);
+
+            // Frother pitcher
+            const pitcher = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.25, 8), metalMat);
+            pitcher.position.set(0.2, 0.15, 0);
+            group.add(pitcher);
+
+            // Frother arm
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 6), metalMat);
+            arm.position.set(0, 0.5, 0);
+            arm.rotation.z = 0.5;
+            group.add(arm);
+
+            // Steam indicator
+            const indicator = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), whiteMat);
+            indicator.position.set(-0.12, 0.35, 0);
+            group.add(indicator);
+
+            return group;
+        }
+
+        function createRegister() {
+            const group = new THREE.Group();
+
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+            const screenMat = new THREE.MeshStandardMaterial({ color: 0x3498db, emissive: 0x1a5276, emissiveIntensity: 0.3 });
+
+            // Body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.4), bodyMat);
+            group.add(body);
+
+            // Screen
+            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.02), bodyMat);
+            screen.position.set(0, 0.18, -0.1);
+            screen.rotation.x = -0.3;
+            group.add(screen);
+
+            const screenFace = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.2), screenMat);
+            screenFace.position.set(0, 0.19, -0.08);
+            screenFace.rotation.x = -0.3;
+            group.add(screenFace);
+
+            return group;
+        }
+
+        function createDisplayCase() {
+            const group = new THREE.Group();
+
+            const glassMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.3,
+                roughness: 0.1
+            });
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x5d4e37 });
+
+            // Frame
+            const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.6), woodMat);
+            group.add(base);
+
+            const back = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.05), glassMat);
+            back.position.set(0, 0.2, -0.275);
+            group.add(back);
+
+            const front = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 0.05), glassMat);
+            front.position.set(0, 0.15, 0.275);
+            front.rotation.x = 0.3;
+            group.add(front);
+
+            // Pastries inside
+            const pastryColors = [0xdaa520, 0x8b4513, 0xf5deb3];
+            for (let i = -0.4; i <= 0.4; i += 0.4) {
+                const pastry = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.08, 8, 8),
+                    new THREE.MeshStandardMaterial({ color: pastryColors[Math.floor(Math.random() * 3)] })
+                );
+                pastry.scale.y = 0.6;
+                pastry.position.set(i, 0.1, 0);
+                group.add(pastry);
+            }
+
+            return group;
+        }
+
+        function buildSeating() {
+            const tablePositions = [
+                { x: -3.5, z: 0 },
+                { x: -3.5, z: 3 },
+                { x: 3.5, z: 0 },
+                { x: 3.5, z: 3 },
+                { x: 0, z: 2 }
+            ];
+
+            tablePositions.forEach(pos => {
+                const table = createTable();
+                table.position.set(pos.x, 0, pos.z);
+                cafeInterior.add(table);
+
+                // Add chairs around table
+                const chairOffsets = [
+                    { x: 0.6, z: 0, rot: Math.PI / 2 },
+                    { x: -0.6, z: 0, rot: -Math.PI / 2 }
+                ];
+
+                chairOffsets.forEach(offset => {
+                    const chair = createChair();
+                    chair.position.set(pos.x + offset.x, 0, pos.z + offset.z);
+                    chair.rotation.y = offset.rot;
+                    cafeInterior.add(chair);
+                });
+            });
+        }
+
+        function createTable() {
+            const group = new THREE.Group();
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b5344, roughness: 0.7 });
+
+            // Top
+            const top = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 16), woodMat);
+            top.position.y = 0.75;
+            top.castShadow = true;
+            group.add(top);
+
+            // Leg
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.7, 8), woodMat);
+            leg.position.y = 0.35;
+            group.add(leg);
+
+            // Base
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.05, 8), woodMat);
+            base.position.y = 0.025;
+            group.add(base);
+
+            return group;
+        }
+
+        function createChair() {
+            const group = new THREE.Group();
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x5d4e37, roughness: 0.8 });
+            const cushionMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.9 });
+
+            // Seat
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.4), cushionMat);
+            seat.position.y = 0.45;
+            group.add(seat);
+
+            // Back
+            const back = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.05), cushionMat);
+            back.position.set(0, 0.7, -0.175);
+            group.add(back);
+
+            // Legs
+            const legPositions = [
+                { x: 0.15, z: 0.15 },
+                { x: -0.15, z: 0.15 },
+                { x: 0.15, z: -0.15 },
+                { x: -0.15, z: -0.15 }
+            ];
+
+            legPositions.forEach(pos => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45, 6), woodMat);
+                leg.position.set(pos.x, 0.225, pos.z);
+                group.add(leg);
+            });
+
+            return group;
+        }
+
+        function buildWindows() {
+            const windowMat = new THREE.MeshStandardMaterial({
+                color: 0x87ceeb,
+                transparent: true,
+                opacity: 0.4,
+                roughness: 0.1
+            });
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x4a3728 });
+
+            // Left wall windows
+            for (let z = -3; z <= 3; z += 3) {
+                const windowGroup = new THREE.Group();
+
+                const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2), windowMat);
+                glass.position.set(-5.85, 2.2, z);
+                glass.rotation.y = Math.PI / 2;
+                windowGroup.add(glass);
+
+                // Frame
+                const frameH = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 1.6), frameMat);
+                frameH.position.set(-5.85, 3.25, z);
+                windowGroup.add(frameH);
+
+                const frameH2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 1.6), frameMat);
+                frameH2.position.set(-5.85, 1.15, z);
+                windowGroup.add(frameH2);
+
+                cafeInterior.add(windowGroup);
+            }
+        }
+
+        function buildDecorations() {
+            // Hanging lights
+            const lightPositions = [
+                { x: -2, z: 0 },
+                { x: 2, z: 0 },
+                { x: 0, z: 3 },
+                { x: -2, z: -3 },
+                { x: 2, z: -3 }
+            ];
+
+            lightPositions.forEach(pos => {
+                const light = createHangingLight();
+                light.position.set(pos.x, 3.5, pos.z);
+                cafeInterior.add(light);
+            });
+
+            // Wall art
+            const artMat = new THREE.MeshStandardMaterial({ color: 0xdaa520 });
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f });
+
+            const art1 = new THREE.Group();
+            const frame1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 0.05), frameMat);
+            const canvas1 = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), artMat);
+            canvas1.position.z = 0.03;
+            art1.add(frame1, canvas1);
+            art1.position.set(0, 2.5, -7.35);
+            cafeInterior.add(art1);
+
+            // Potted plants
+            const plantPositions = [
+                { x: -5.5, z: -6 },
+                { x: 5.5, z: -6 },
+                { x: -5.5, z: 6 }
+            ];
+
+            plantPositions.forEach(pos => {
+                const plant = createPottedPlant();
+                plant.position.set(pos.x, 0, pos.z);
+                cafeInterior.add(plant);
+            });
+
+            // Shelves with items
+            const shelf = createShelf();
+            shelf.position.set(-3, 2.5, -7.3);
+            cafeInterior.add(shelf);
+
+            const shelf2 = createShelf();
+            shelf2.position.set(3, 2.5, -7.3);
+            cafeInterior.add(shelf2);
+        }
+
+        function createHangingLight() {
+            const group = new THREE.Group();
+
+            const cordMat = new THREE.MeshBasicMaterial({ color: 0x2d2d2d });
+            const shadeMat = new THREE.MeshStandardMaterial({
+                color: 0xf5deb3,
+                emissive: 0xffa500,
+                emissiveIntensity: 0.3,
+                side: THREE.DoubleSide
+            });
+
+            // Cord
+            const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5, 6), cordMat);
+            cord.position.y = 0.25;
+            group.add(cord);
+
+            // Shade
+            const shadeGeom = new THREE.ConeGeometry(0.2, 0.15, 8, 1, true);
+            const shade = new THREE.Mesh(shadeGeom, shadeMat);
+            shade.rotation.x = Math.PI;
+            group.add(shade);
+
+            // Bulb
+            const bulb = new THREE.Mesh(
+                new THREE.SphereGeometry(0.05, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xffdd88 })
+            );
+            bulb.position.y = -0.05;
+            group.add(bulb);
+
+            return group;
+        }
+
+        function createPottedPlant() {
+            const group = new THREE.Group();
+
+            const potMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+            const plantMat = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+
+            // Pot
+            const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.25, 8), potMat);
+            pot.position.y = 0.125;
+            group.add(pot);
+
+            // Plant foliage
+            for (let i = 0; i < 5; i++) {
+                const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), plantMat);
+                leaf.scale.set(1, 1.5, 0.3);
+                leaf.position.set(
+                    (Math.random() - 0.5) * 0.15,
+                    0.35 + Math.random() * 0.2,
+                    (Math.random() - 0.5) * 0.15
+                );
+                leaf.rotation.set(
+                    Math.random() * 0.5,
+                    Math.random() * Math.PI * 2,
+                    Math.random() * 0.5
+                );
+                group.add(leaf);
+            }
+
+            return group;
+        }
+
+        function createShelf() {
+            const group = new THREE.Group();
+
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x5d4e37 });
+
+            // Shelf boards
+            for (let i = 0; i < 2; i++) {
+                const board = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.25), woodMat);
+                board.position.y = i * 0.4;
+                group.add(board);
+            }
+
+            // Items on shelf (coffee bags, cups, etc.)
+            const itemColors = [0x4a3728, 0x8b4513, 0xdaa520, 0xf5f5dc];
+            for (let i = -0.5; i <= 0.5; i += 0.25) {
+                const item = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.15, 0.2, 0.1),
+                    new THREE.MeshStandardMaterial({ color: itemColors[Math.floor(Math.random() * 4)] })
+                );
+                item.position.set(i, 0.15, 0);
+                group.add(item);
+            }
+
+            return group;
+        }
+
+        function buildExterior() {
+            const exteriorGroup = new THREE.Group();
+
+            // Ground outside - grass
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x4a7c3f });
+            const grass = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), grassMat);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.y = -0.02;
+            grass.receiveShadow = true;
+            exteriorGroup.add(grass);
+
+            // Cobblestone street
+            const streetMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.9 });
+            const street = new THREE.Mesh(new THREE.PlaneGeometry(12, 60), streetMat);
+            street.rotation.x = -Math.PI / 2;
+            street.position.set(18, -0.01, 0);
+            street.receiveShadow = true;
+            exteriorGroup.add(street);
+
+            // Sidewalk
+            const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x8b8b8b, roughness: 0.7 });
+            const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(4, 60), sidewalkMat);
+            sidewalk.rotation.x = -Math.PI / 2;
+            sidewalk.position.set(10, 0, 0);
+            sidewalk.receiveShadow = true;
+            exteriorGroup.add(sidewalk);
+
+            // Parked car
+            const car = createCar();
+            car.position.set(16, 0, 8);
+            car.rotation.y = Math.PI / 2;
+            exteriorGroup.add(car);
+
+            // Neighboring buildings
+            const building1 = createBuilding(0x8b4513, 'BOOKS');
+            building1.position.set(-15, 0, -5);
+            building1.rotation.y = Math.PI / 4;
+            exteriorGroup.add(building1);
+
+            const building2 = createBuilding(0xcd853f, 'FLOWERS');
+            building2.position.set(25, 0, -8);
+            building2.rotation.y = -Math.PI / 6;
+            exteriorGroup.add(building2);
+
+            // Autumn trees
+            const treePositions = [
+                { x: -15, z: 8 },
+                { x: -12, z: 15 },
+                { x: 28, z: 5 },
+                { x: -18, z: -10 },
+                { x: 30, z: 15 },
+                { x: -20, z: 18 }
+            ];
+
+            treePositions.forEach(pos => {
+                const tree = createAutumnTree();
+                tree.position.set(pos.x, 0, pos.z);
+                exteriorGroup.add(tree);
+            });
+
+            // Street lamps along sidewalk
+            const lampPositions = [
+                { x: 10, z: 12 },
+                { x: 10, z: -5 },
+                { x: 10, z: -18 },
+                { x: -8, z: 10 }
+            ];
+
+            lampPositions.forEach(pos => {
+                const lamp = createStreetLamp();
+                lamp.position.set(pos.x, 0, pos.z);
+                exteriorGroup.add(lamp);
+            });
+
+            // Bench outside
+            const bench = createBench();
+            bench.position.set(-8, 0, 10);
+            bench.rotation.y = Math.PI / 4;
+            exteriorGroup.add(bench);
+
+            // Another bench near sidewalk
+            const bench2 = createBench();
+            bench2.position.set(7, 0, 5);
+            bench2.rotation.y = -Math.PI / 2;
+            exteriorGroup.add(bench2);
+
+            scene.add(exteriorGroup);
+        }
+
+        function createCar() {
+            const group = new THREE.Group();
+
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, metalness: 0.6, roughness: 0.4 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x87CEEB, metalness: 0.3, roughness: 0.1, transparent: true, opacity: 0.7 });
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+
+            // Body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 1.8), bodyMat);
+            body.position.y = 0.7;
+            body.castShadow = true;
+            group.add(body);
+
+            // Cabin
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1.6), glassMat);
+            cabin.position.set(-0.3, 1.5, 0);
+            group.add(cabin);
+
+            // Wheels
+            const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.2, 16);
+            [[-1.2, 0.35, 0.9], [-1.2, 0.35, -0.9], [1.2, 0.35, 0.9], [1.2, 0.35, -0.9]].forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                wheel.position.set(...pos);
+                wheel.rotation.x = Math.PI / 2;
+                group.add(wheel);
+            });
+
+            return group;
+        }
+
+        function createBuilding(color, sign) {
+            const group = new THREE.Group();
+
+            const wallMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 });
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x5d4e37, roughness: 0.7 });
+            const windowMat = new THREE.MeshStandardMaterial({ color: 0xffeaa7, emissive: 0xffcc00, emissiveIntensity: 0.2 });
+
+            // Walls
+            const walls = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 5), wallMat);
+            walls.position.y = 2.5;
+            walls.castShadow = true;
+            group.add(walls);
+
+            // Roof
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(4.5, 2, 4), roofMat);
+            roof.position.y = 6;
+            roof.rotation.y = Math.PI / 4;
+            group.add(roof);
+
+            // Windows
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 2; col++) {
+                    const win = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.1), windowMat);
+                    win.position.set(-0.8 + col * 1.6, 2 + row * 1.8, 2.55);
+                    group.add(win);
+                }
+            }
+
+            // Door
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x3d2817 });
+            const door = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.1), doorMat);
+            door.position.set(0, 1, 2.55);
+            group.add(door);
+
+            return group;
+        }
+
+        function createAutumnTree() {
+            const group = new THREE.Group();
+
+            // Trunk
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3728 });
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 3, 8), trunkMat);
+            trunk.position.y = 1.5;
+            trunk.castShadow = true;
+            group.add(trunk);
+
+            // Autumn foliage
+            const foliageColors = [0xff6b35, 0xf7c548, 0xd63031, 0xe17055];
+
+            for (let i = 0; i < 8; i++) {
+                const foliage = new THREE.Mesh(
+                    new THREE.IcosahedronGeometry(1.2, 0),
+                    new THREE.MeshStandardMaterial({ color: foliageColors[i % 4] })
+                );
+                foliage.position.set(
+                    (Math.random() - 0.5) * 2,
+                    3.5 + Math.random() * 1.5,
+                    (Math.random() - 0.5) * 2
+                );
+                foliage.scale.setScalar(0.5 + Math.random() * 0.5);
+                foliage.castShadow = true;
+                group.add(foliage);
+            }
+
+            return group;
+        }
+
+        function createStreetLamp() {
+            const group = new THREE.Group();
+
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0x2d2d2d });
+            const lightMat = new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0xffaa00, emissiveIntensity: 0.5 });
+
+            // Pole
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 4, 8), poleMat);
+            pole.position.y = 2;
+            group.add(pole);
+
+            // Light housing
+            const housing = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.4), poleMat);
+            housing.position.y = 4;
+            group.add(housing);
+
+            // Light
+            const light = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), lightMat);
+            light.position.y = 3.8;
+            group.add(light);
+
+            // Add actual point light
+            const pointLight = new THREE.PointLight(0xffaa55, 0.5, 15);
+            pointLight.position.y = 3.8;
+            group.add(pointLight);
+
+            return group;
+        }
+
+        function createBench() {
+            const group = new THREE.Group();
+
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x5d4e37 });
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x2d2d2d, metalness: 0.8 });
+
+            // Seat planks
+            for (let i = -0.2; i <= 0.2; i += 0.1) {
+                const plank = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.12), woodMat);
+                plank.position.set(0, 0.45, i);
+                group.add(plank);
+            }
+
+            // Back planks
+            for (let i = 0; i < 3; i++) {
+                const plank = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 0.05), woodMat);
+                plank.position.set(0, 0.6 + i * 0.15, -0.3);
+                group.add(plank);
+            }
+
+            // Metal legs
+            const legPositions = [{ x: -0.6 }, { x: 0.6 }];
+            legPositions.forEach(pos => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.45, 0.5), metalMat);
+                leg.position.set(pos.x, 0.225, 0);
+                group.add(leg);
+            });
+
+            return group;
+        }
+
+        // ============================================
+        // LIGHTING
+        // ============================================
+
+        function setupLighting() {
+            // Ambient light - warm autumn tone
+            const ambient = new THREE.AmbientLight(0xffa566, 0.4);
+            scene.add(ambient);
+
+            // Main directional light (sun through windows)
+            const sunLight = new THREE.DirectionalLight(0xffcc88, 0.6);
+            sunLight.position.set(-10, 10, 5);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 50;
+            sunLight.shadow.camera.left = -15;
+            sunLight.shadow.camera.right = 15;
+            sunLight.shadow.camera.top = 15;
+            sunLight.shadow.camera.bottom = -15;
+            scene.add(sunLight);
+
+            // Interior point lights
+            const interiorLightPositions = [
+                { x: -2, y: 3.2, z: 0 },
+                { x: 2, y: 3.2, z: 0 },
+                { x: 0, y: 3.2, z: 3 },
+                { x: -2, y: 3.2, z: -3 },
+                { x: 2, y: 3.2, z: -3 }
+            ];
+
+            interiorLightPositions.forEach(pos => {
+                const pointLight = new THREE.PointLight(0xffaa55, 0.4, 8);
+                pointLight.position.set(pos.x, pos.y, pos.z);
+                scene.add(pointLight);
+            });
+
+            // Counter spotlight
+            const counterSpot = new THREE.SpotLight(0xffffff, 0.5, 10, Math.PI / 6);
+            counterSpot.position.set(0, 3.5, -5);
+            counterSpot.target.position.set(0, 1, -5);
+            scene.add(counterSpot);
+            scene.add(counterSpot.target);
+        }
+
+        // ============================================
+        // PARTICLE SYSTEMS
+        // ============================================
+
+        function createParticleSystems() {
+            // Falling leaves
+            createLeafParticles();
+
+            // Rain
+            createRainParticles();
+        }
+
+        function createLeafParticles() {
+            const leafCount = 200;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(leafCount * 3);
+            const colors = new Float32Array(leafCount * 3);
+            const sizes = new Float32Array(leafCount);
+            const velocities = [];
+
+            const leafColors = [
+                new THREE.Color(0xff6b35),
+                new THREE.Color(0xf7c548),
+                new THREE.Color(0xd63031),
+                new THREE.Color(0xe17055)
+            ];
+
+            for (let i = 0; i < leafCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 60;
+                positions[i * 3 + 1] = Math.random() * 15;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+
+                const color = leafColors[Math.floor(Math.random() * 4)];
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+
+                sizes[i] = 0.1 + Math.random() * 0.15;
+
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.5,
+                    y: -0.3 - Math.random() * 0.3,
+                    z: (Math.random() - 0.5) * 0.5,
+                    rotSpeed: Math.random() * 0.1
+                });
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            particles.leaves = new THREE.Points(geometry, material);
+            particles.leaves.userData.velocities = velocities;
+            scene.add(particles.leaves);
+        }
+
+        function createRainParticles() {
+            const rainCount = 1000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(rainCount * 3);
+            const velocities = [];
+
+            for (let i = 0; i < rainCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 50;
+                positions[i * 3 + 1] = Math.random() * 20;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+
+                velocities.push({
+                    y: -8 - Math.random() * 4
+                });
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                color: 0x8899aa,
+                size: 0.05,
+                transparent: true,
+                opacity: 0.4
+            });
+
+            particles.rain = new THREE.Points(geometry, material);
+            particles.rain.userData.velocities = velocities;
+            scene.add(particles.rain);
+        }
+
+        function updateParticles(delta) {
+            // Update leaves
+            if (particles.leaves) {
+                const positions = particles.leaves.geometry.attributes.position.array;
+                const velocities = particles.leaves.userData.velocities;
+
+                for (let i = 0; i < velocities.length; i++) {
+                    positions[i * 3] += velocities[i].x * delta;
+                    positions[i * 3 + 1] += velocities[i].y * delta;
+                    positions[i * 3 + 2] += velocities[i].z * delta;
+
+                    // Sway effect
+                    positions[i * 3] += Math.sin(Date.now() * 0.001 + i) * 0.01;
+
+                    // Reset if below ground
+                    if (positions[i * 3 + 1] < 0) {
+                        positions[i * 3 + 1] = 15;
+                        positions[i * 3] = (Math.random() - 0.5) * 60;
+                        positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+                    }
+                }
+
+                particles.leaves.geometry.attributes.position.needsUpdate = true;
+            }
+
+            // Update rain
+            if (particles.rain) {
+                const positions = particles.rain.geometry.attributes.position.array;
+                const velocities = particles.rain.userData.velocities;
+
+                for (let i = 0; i < velocities.length; i++) {
+                    positions[i * 3 + 1] += velocities[i].y * delta;
+
+                    if (positions[i * 3 + 1] < 0) {
+                        positions[i * 3 + 1] = 20;
+                        positions[i * 3] = (Math.random() - 0.5) * 50;
+                        positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+                    }
+                }
+
+                particles.rain.geometry.attributes.position.needsUpdate = true;
+            }
+        }
+
+        // ============================================
+        // AUDIO SYSTEM
+        // ============================================
+
+        async function setupAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioContext.createGain();
+                masterGain.gain.value = 0.3;
+                masterGain.connect(audioContext.destination);
+
+                // Setup volume control
+                document.getElementById('volume-slider').addEventListener('input', (e) => {
+                    masterGain.gain.value = e.target.value / 100;
+                });
+
+                // Setup track buttons
+                document.querySelectorAll('.music-track').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.music-track').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        switchTrack(parseInt(btn.dataset.track));
+                    });
+                });
+            } catch (e) {
+                console.log('Audio not available');
+            }
+        }
+
+        function switchTrack(trackIndex) {
+            // For simplicity, we'll use Web Audio API to generate ambient sounds
+            // In production, you'd load actual lo-fi music files
+            if (bgMusic) {
+                bgMusic.stop();
+            }
+
+            // Create ambient lo-fi tone
+            createAmbientMusic(trackIndex);
+        }
+
+        function createAmbientMusic(trackIndex) {
+            if (!audioContext) return;
+
+            const notes = [
+                [261.63, 329.63, 392.00], // C Major
+                [293.66, 369.99, 440.00], // D Major
+                [329.63, 415.30, 493.88], // E Major
+                [349.23, 440.00, 523.25]  // F Major
+            ];
+
+            const playChord = () => {
+                if (!gameState.isPlaying || gameState.isPaused) return;
+
+                const chord = notes[trackIndex % notes.length];
+                chord.forEach((freq, i) => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.value = freq / 2;
+
+                    gain.gain.value = 0;
+                    gain.gain.linearRampToValueAtTime(0.03, audioContext.currentTime + 0.5);
+                    gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
+
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+
+                    osc.start();
+                    osc.stop(audioContext.currentTime + 3);
+                });
+            };
+
+            // Play ambient chords periodically
+            const interval = setInterval(() => {
+                if (gameState.isPlaying && !gameState.isPaused) {
+                    playChord();
+                } else if (!gameState.isPlaying) {
+                    clearInterval(interval);
+                }
+            }, 4000);
+
+            playChord();
+        }
+
+        function playSound(type) {
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            switch (type) {
+                case 'serve':
+                    osc.frequency.value = 523.25;
+                    gain.gain.value = 0.1;
+                    break;
+                case 'coin':
+                    osc.frequency.value = 880;
+                    gain.gain.value = 0.08;
+                    break;
+                case 'error':
+                    osc.frequency.value = 200;
+                    gain.gain.value = 0.1;
+                    break;
+            }
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.2);
+        }
+
+        // ============================================
+        // EVENT LISTENERS & CONTROLS
+        // ============================================
+
+        function setupEventListeners() {
+            // Pointer lock
+            renderer.domElement.addEventListener('click', () => {
+                if (gameState.isPlaying && !gameState.isPaused) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === renderer.domElement) {
+                    document.addEventListener('mousemove', onMouseMove);
+                } else {
+                    document.removeEventListener('mousemove', onMouseMove);
+                }
+            });
+
+            // Keyboard
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+
+            // Gamepad support
+            window.addEventListener('gamepadconnected', (e) => {
+                console.log('Gamepad connected:', e.gamepad.id);
+            });
+        }
+
+        function onMouseMove(event) {
+            if (!gameState.isPlaying || gameState.isPaused) return;
+
+            const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+            euler.setFromQuaternion(camera.quaternion);
+
+            euler.y -= event.movementX * CONFIG.LOOK_SPEED;
+            euler.x -= event.movementY * CONFIG.LOOK_SPEED;
+            euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+
+            camera.quaternion.setFromEuler(euler);
+        }
+
+        function onKeyDown(event) {
+            if (!gameState.isPlaying) return;
+
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'KeyE': tryInteract(); break;
+                case 'Tab':
+                    event.preventDefault();
+                    if (!gameState.isPaused) openShop();
+                    break;
+                case 'Escape':
+                    if (document.getElementById('shop-modal').style.display === 'flex') {
+                        closeShop();
+                    } else {
+                        togglePause();
+                    }
+                    break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function updateGamepadInput() {
+            const gamepads = navigator.getGamepads();
+            const gamepad = gamepads[0];
+
+            if (!gamepad || !gameState.isPlaying || gameState.isPaused) return;
+
+            // Left stick for movement
+            const deadzone = 0.15;
+            const leftX = Math.abs(gamepad.axes[0]) > deadzone ? gamepad.axes[0] : 0;
+            const leftY = Math.abs(gamepad.axes[1]) > deadzone ? gamepad.axes[1] : 0;
+
+            moveForward = leftY < -deadzone;
+            moveBackward = leftY > deadzone;
+            moveLeft = leftX < -deadzone;
+            moveRight = leftX > deadzone;
+
+            // Right stick for look
+            const rightX = Math.abs(gamepad.axes[2]) > deadzone ? gamepad.axes[2] : 0;
+            const rightY = Math.abs(gamepad.axes[3]) > deadzone ? gamepad.axes[3] : 0;
+
+            if (rightX !== 0 || rightY !== 0) {
+                const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+                euler.setFromQuaternion(camera.quaternion);
+                euler.y -= rightX * 0.03;
+                euler.x -= rightY * 0.03;
+                euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+                camera.quaternion.setFromEuler(euler);
+            }
+
+            // A button for interact
+            if (gamepad.buttons[0].pressed) {
+                tryInteract();
+            }
+
+            // Start button for pause
+            if (gamepad.buttons[9].pressed) {
+                togglePause();
+            }
+        }
+
+        // ============================================
+        // GAME LOGIC
+        // ============================================
+
+        function startGame(mode) {
+            gameState.mode = mode;
+            gameState.isPlaying = true;
+            gameState.isPaused = false;
+            gameState.money = CONFIG.STARTING_MONEY;
+            gameState.rating = 5.0;
+            gameState.totalReviews = 0;
+            gameState.customersServed = 0;
+            gameState.activeOrders = [];
+            gameState.customers = [];
+
+            // Reset camera
+            camera.position.set(0, 1.6, 2);
+            camera.rotation.set(0, 0, 0);
+
+            // Show HUD
+            document.getElementById('blocker').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('crosshair').style.display = 'block';
+            document.getElementById('orders-panel').style.display = 'block';
+            document.getElementById('music-panel').style.display = 'block';
+
+            // Show mode indicator for competitive
+            if (mode === 'competitive') {
+                document.getElementById('mode-indicator').style.display = 'block';
+                document.getElementById('mode-text').textContent = '🔥 Competitive Mode';
+            }
+
+            updateHUD();
+
+            // Start audio
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            createAmbientMusic(0);
+
+            // Start spawning customers
+            spawnCustomerLoop();
+
+            // Select daily special if unlocked
+            if (gameState.modifiers.dailySpecials) {
+                selectDailySpecial();
+            }
+        }
+
+        function selectDailySpecial() {
+            const unlocked = MENU_ITEMS.filter(item => item.unlocked);
+            gameState.todaysSpecial = unlocked[Math.floor(Math.random() * unlocked.length)].id;
+            showNotification('Daily Special', `Today's special: ${MENU_ITEMS.find(i => i.id === gameState.todaysSpecial).name}! +30% bonus!`);
+        }
+
+        function spawnCustomerLoop() {
+            if (!gameState.isPlaying) return;
+
+            const interval = CONFIG.CUSTOMER_SPAWN_INTERVAL[gameState.mode];
+
+            // Spawn first customer immediately
+            if (gameState.customersServed === 0 && gameState.customers.length === 0) {
+                spawnCustomer();
+            }
+
+            setTimeout(() => {
+                if (gameState.isPlaying && !gameState.isPaused) {
+                    spawnCustomer();
+                }
+                spawnCustomerLoop();
+            }, interval + Math.random() * 2000);
+        }
+
+        function spawnCustomer() {
+            if (gameState.customers.length >= 5) return;
+
+            // Select customer type
+            const types = Object.keys(CUSTOMER_TYPES).filter(type =>
+                !CUSTOMER_TYPES[type].competitiveOnly || gameState.mode === 'competitive'
+            );
+
+            // Weight towards regular customers
+            const weights = types.map(t => t === 'regular' ? 3 : t === 'chill' ? 2 : 1);
+            const totalWeight = weights.reduce((a, b) => a + b, 0);
+            let random = Math.random() * totalWeight;
+            let typeIndex = 0;
+
+            for (let i = 0; i < weights.length; i++) {
+                random -= weights[i];
+                if (random <= 0) {
+                    typeIndex = i;
+                    break;
+                }
+            }
+
+            const customerType = types[typeIndex];
+            const typeData = CUSTOMER_TYPES[customerType];
+
+            // Create customer NPC
+            const customer = createCustomerNPC(typeData.color);
+            customer.position.set(0, 0, 10);
+            customer.userData = {
+                type: customerType,
+                state: 'entering',
+                order: generateOrder(),
+                patience: CONFIG.CUSTOMER_PATIENCE[gameState.mode] * typeData.patience,
+                timeWaiting: 0,
+                satisfied: true
+            };
+
+            scene.add(customer);
+            gameState.customers.push(customer);
+
+            // Move customer into café
+            animateCustomerEnter(customer);
+        }
+
+        function createCustomerNPC(color) {
+            const group = new THREE.Group();
+
+            // Body (using cylinder + sphere since CapsuleGeometry isn't in r128)
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color });
+
+            // Torso cylinder
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.5, 8), bodyMat);
+            torso.position.y = 0.9;
+            group.add(torso);
+
+            // Shoulders sphere
+            const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), bodyMat);
+            shoulders.position.y = 1.15;
+            shoulders.scale.set(1, 0.5, 0.8);
+            group.add(shoulders);
+
+            // Legs
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+            const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 6), legMat);
+            leftLeg.position.set(-0.1, 0.35, 0);
+            group.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 6), legMat);
+            rightLeg.position.set(0.1, 0.35, 0);
+            group.add(rightLeg);
+
+            // Head
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), headMat);
+            head.position.y = 1.55;
+            group.add(head);
+
+            // Eyes
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), eyeMat);
+            leftEye.position.set(-0.07, 1.58, 0.17);
+            group.add(leftEye);
+
+            const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), eyeMat);
+            rightEye.position.set(0.07, 1.58, 0.17);
+            group.add(rightEye);
+
+            // Hair
+            const hairColors = [0x2c1810, 0x8b4513, 0xffd700, 0x000000, 0x8b0000];
+            const hairMat = new THREE.MeshStandardMaterial({ color: hairColors[Math.floor(Math.random() * hairColors.length)] });
+            const hair = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), hairMat);
+            hair.position.y = 1.62;
+            hair.scale.set(1, 0.7, 1);
+            group.add(hair);
+
+            // Make customer interactable
+            group.userData.type = 'customer';
+
+            return group;
+        }
+
+        function generateOrder() {
+            const available = MENU_ITEMS.filter(item => item.unlocked);
+            const itemCount = 1 + Math.floor(Math.random() * 2);
+            const items = [];
+
+            for (let i = 0; i < itemCount; i++) {
+                items.push(available[Math.floor(Math.random() * available.length)]);
+            }
+
+            return items;
+        }
+
+        function animateCustomerEnter(customer) {
+            // Simple walk animation to counter - faster movement
+            const queueIndex = gameState.customers.indexOf(customer);
+            const targetZ = QUEUE_POSITIONS[queueIndex % QUEUE_POSITIONS.length].z;
+            const targetX = QUEUE_POSITIONS[queueIndex % QUEUE_POSITIONS.length].x;
+
+            const animate = () => {
+                if (!customer.userData || customer.userData.state !== 'entering') return;
+
+                const dx = targetX - customer.position.x;
+                const dz = targetZ - customer.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist > 0.1) {
+                    customer.position.x += dx * 0.1;
+                    customer.position.z += dz * 0.1;
+                    customer.rotation.y = Math.atan2(dx, dz);
+                    requestAnimationFrame(animate);
+                } else {
+                    customer.userData.state = 'waiting';
+                    customer.rotation.y = Math.PI; // Face counter
+                    addOrder(customer);
+                }
+            };
+
+            animate();
+        }
+
+        function addOrder(customer) {
+            const order = {
+                customer: customer,
+                items: customer.userData.order,
+                startTime: Date.now()
+            };
+
+            gameState.activeOrders.push(order);
+            updateOrdersDisplay();
+        }
+
+        function updateOrdersDisplay() {
+            const panel = document.getElementById('orders-panel');
+            panel.innerHTML = '';
+
+            gameState.activeOrders.forEach((order, index) => {
+                const card = document.createElement('div');
+                card.className = 'order-card';
+
+                const customerType = order.customer.userData.type;
+                const typeData = CUSTOMER_TYPES[customerType];
+
+                card.innerHTML = `
+            <div class="order-customer">${typeData.name} #${index + 1}</div>
+            <div class="order-items">${order.items.map(i => i.name).join(', ')}</div>
+            <div class="order-timer">Waiting...</div>
+        `;
+
+                panel.appendChild(card);
+            });
+        }
+
+        function tryInteract() {
+            // If mini-game active, handle it separately
+            if (miniGameState.active) {
+                handleMiniGameInput();
+                return;
+            }
+
+            // Check what we're looking at
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            for (const intersect of intersects) {
+                if (intersect.distance > CONFIG.INTERACTION_DISTANCE) continue;
+
+                let obj = intersect.object;
+                while (obj.parent && !obj.userData.interactable && !obj.userData.type) {
+                    obj = obj.parent;
+                }
+
+                // ESPRESSO MACHINE - Start making coffee
+                if (obj.userData.type === 'espresso') {
+                    if (heldItems.length >= MAX_HELD_ITEMS) {
+                        showNotification('Hands Full!', 'Serve items first');
+                        return;
+                    }
+                    if (gameState.activeOrders.length === 0) {
+                        showNotification('No Orders!', 'Wait for customers');
+                        return;
+                    }
+                    startMiniGame('timing', 'espresso', () => {
+                        const quality = miniGameState.quality;
+                        addHeldItem('espresso', quality);
+                        showQualityPopup(quality);
+                    });
+                    return;
+                }
+
+                // MILK STATION - Froth milk for lattes
+                if (obj.userData.type === 'milk') {
+                    if (heldItems.length >= MAX_HELD_ITEMS) {
+                        showNotification('Hands Full!', 'Serve items first');
+                        return;
+                    }
+                    startMiniGame('tap', 'milk', () => {
+                        const quality = miniGameState.quality;
+                        addHeldItem('milk', quality);
+                        showQualityPopup(quality);
+                    });
+                    return;
+                }
+
+                // PASTRY DISPLAY - Grab pastries
+                if (obj.userData.type === 'pastry') {
+                    if (heldItems.length >= MAX_HELD_ITEMS) {
+                        showNotification('Hands Full!', 'Serve items first');
+                        return;
+                    }
+                    // Instant grab for pastries
+                    addHeldItem('pastry', 100);
+                    playSound('serve');
+                    showNotification('Grabbed!', 'Pastry ready');
+                    return;
+                }
+
+                // REGISTER - Open shop
+                if (obj.userData.type === 'register') {
+                    openShop();
+                    return;
+                }
+
+                // CUSTOMER - Serve held items
+                if (obj.userData.type === 'customer') {
+                    if (heldItems.length === 0) {
+                        showNotification('Empty Hands!', 'Make something first');
+                        return;
+                    }
+                    serveCustomer(obj);
+                    return;
+                }
+            }
+        }
+
+        // ============================================
+        // MINI-GAME SYSTEM
+        // ============================================
+
+        function startMiniGame(type, itemType, callback) {
+            miniGameState = {
+                active: true,
+                type: type,
+                itemType: itemType,
+                markerPos: 0,
+                markerDirection: 1,
+                targetStart: 30 + Math.random() * 20,
+                targetEnd: 0,
+                tapProgress: 0,
+                tapRequired: 12 + Math.floor(Math.random() * 6),
+                quality: 0,
+                callback: callback,
+                startTime: Date.now()
+            };
+            miniGameState.targetEnd = miniGameState.targetStart + 20;
+
+            const overlay = document.getElementById('minigame-overlay');
+            overlay.style.display = 'flex';
+
+            if (type === 'timing') {
+                document.getElementById('minigame-title').textContent = '☕ Making ' + (itemType === 'espresso' ? 'Espresso' : 'Drink');
+                document.getElementById('minigame-instruction').textContent = 'Press E in the green zone!';
+                document.getElementById('timing-bar').style.display = 'block';
+                document.getElementById('tap-meter').style.display = 'none';
+                document.getElementById('tap-count').style.display = 'none';
+
+                // Position target zone
+                const target = document.getElementById('timing-target');
+                target.style.left = miniGameState.targetStart + '%';
+                target.style.width = (miniGameState.targetEnd - miniGameState.targetStart) + '%';
+            } else if (type === 'tap') {
+                document.getElementById('minigame-title').textContent = '🥛 Frothing Milk';
+                document.getElementById('minigame-instruction').textContent = 'Tap E rapidly!';
+                document.getElementById('timing-bar').style.display = 'none';
+                document.getElementById('tap-meter').style.display = 'block';
+                document.getElementById('tap-count').style.display = 'block';
+                document.getElementById('tap-fill').style.width = '0%';
+            }
+
+            document.exitPointerLock();
+        }
+
+        function handleMiniGameInput() {
+            if (!miniGameState.active) return;
+
+            if (miniGameState.type === 'timing') {
+                // Check if marker is in target zone
+                const pos = miniGameState.markerPos;
+                const inPerfect = pos >= miniGameState.targetStart + 5 && pos <= miniGameState.targetEnd - 5;
+                const inGood = pos >= miniGameState.targetStart && pos <= miniGameState.targetEnd;
+
+                if (inPerfect) {
+                    miniGameState.quality = 100;
+                } else if (inGood) {
+                    miniGameState.quality = 70;
+                } else if (pos >= miniGameState.targetStart - 10 && pos <= miniGameState.targetEnd + 10) {
+                    miniGameState.quality = 40;
+                } else {
+                    miniGameState.quality = 10;
+                }
+                endMiniGame();
+            } else if (miniGameState.type === 'tap') {
+                miniGameState.tapProgress++;
+                document.getElementById('tap-fill').style.width = (miniGameState.tapProgress / miniGameState.tapRequired * 100) + '%';
+
+                if (miniGameState.tapProgress >= miniGameState.tapRequired) {
+                    // Quality based on speed
+                    const elapsed = Date.now() - miniGameState.startTime;
+                    if (elapsed < 2000) {
+                        miniGameState.quality = 100;
+                    } else if (elapsed < 3500) {
+                        miniGameState.quality = 70;
+                    } else {
+                        miniGameState.quality = 40;
+                    }
+                    endMiniGame();
+                }
+            }
+        }
+
+        function updateMiniGame() {
+            if (!miniGameState.active) return;
+
+            if (miniGameState.type === 'timing') {
+                // Move marker back and forth
+                miniGameState.markerPos += miniGameState.markerDirection * 1.5;
+                if (miniGameState.markerPos >= 100) {
+                    miniGameState.markerPos = 100;
+                    miniGameState.markerDirection = -1;
+                } else if (miniGameState.markerPos <= 0) {
+                    miniGameState.markerPos = 0;
+                    miniGameState.markerDirection = 1;
+                }
+                document.getElementById('timing-marker').style.left = miniGameState.markerPos + '%';
+            } else if (miniGameState.type === 'tap') {
+                // Decay tap progress slowly
+                if (miniGameState.tapProgress > 0) {
+                    miniGameState.tapProgress -= 0.05;
+                    document.getElementById('tap-fill').style.width = Math.max(0, miniGameState.tapProgress / miniGameState.tapRequired * 100) + '%';
+                }
+
+                // Time limit
+                if (Date.now() - miniGameState.startTime > 5000) {
+                    miniGameState.quality = 10;
+                    endMiniGame();
+                }
+            }
+        }
+
+        function endMiniGame() {
+            document.getElementById('minigame-overlay').style.display = 'none';
+
+            if (miniGameState.callback) {
+                miniGameState.callback();
+            }
+
+            miniGameState.active = false;
+
+            // Re-lock pointer
+            document.getElementById('game-container').requestPointerLock();
+        }
+
+        function showQualityPopup(quality) {
+            const popup = document.getElementById('quality-popup');
+            popup.className = '';
+
+            if (quality >= 90) {
+                popup.textContent = 'PERFECT! ✨';
+                popup.classList.add('quality-perfect');
+            } else if (quality >= 60) {
+                popup.textContent = 'GOOD!';
+                popup.classList.add('quality-good');
+            } else if (quality >= 30) {
+                popup.textContent = 'OK...';
+                popup.classList.add('quality-ok');
+            } else {
+                popup.textContent = 'BAD!';
+                popup.classList.add('quality-bad');
+            }
+
+            popup.style.display = 'block';
+            playSound('serve');
+
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 1500);
+        }
+
+        // ============================================
+        // HELD ITEMS SYSTEM  
+        // ============================================
+
+        function addHeldItem(type, quality) {
+            if (heldItems.length >= MAX_HELD_ITEMS) return;
+
+            heldItems.push({ type, quality });
+            updateHeldItemDisplay();
+        }
+
+        function updateHeldItemDisplay() {
+            const display = document.getElementById('held-item');
+
+            if (heldItems.length === 0) {
+                display.style.display = 'none';
+                return;
+            }
+
+            display.style.display = 'block';
+
+            const icons = {
+                espresso: '☕',
+                milk: '🥛',
+                pastry: '🥐',
+                latte: '☕',
+                cappuccino: '☕'
+            };
+
+            const names = {
+                espresso: 'Espresso',
+                milk: 'Milk',
+                pastry: 'Pastry',
+                latte: 'Latte',
+                cappuccino: 'Cappuccino'
+            };
+
+            const itemIcons = heldItems.map(i => icons[i.type] || '☕').join(' ');
+            const itemNames = heldItems.map(i => names[i.type] || i.type).join(', ');
+
+            document.getElementById('held-item-icon').textContent = itemIcons;
+            document.getElementById('held-item-name').textContent = itemNames;
+        }
+
+        function serveCustomer(customerObj) {
+            // Find the customer's order
+            const orderIndex = gameState.activeOrders.findIndex(o => o.customer === customerObj);
+            if (orderIndex === -1) {
+                showNotification('No Order!', 'This customer has no order');
+                return;
+            }
+
+            const order = gameState.activeOrders[orderIndex];
+
+            // Check if held items match order requirements
+            // For simplicity, any held items count as fulfilling the order
+            const avgQuality = heldItems.reduce((sum, i) => sum + i.quality, 0) / heldItems.length;
+
+            // Complete the order with quality modifier
+            completeOrderWithQuality(orderIndex, avgQuality);
+
+            // Clear held items
+            heldItems = [];
+            updateHeldItemDisplay();
+        }
+
+        function completeOrderWithQuality(orderIndex, quality) {
+            if (orderIndex >= gameState.activeOrders.length) return;
+
+            const order = gameState.activeOrders[orderIndex];
+            const customer = order.customer;
+            const typeData = CUSTOMER_TYPES[customer.userData.type];
+
+            // Calculate payment
+            let total = order.items.reduce((sum, item) => sum + gameState.menuPrices[item.id], 0);
+
+            // Daily special bonus
+            if (gameState.todaysSpecial && order.items.some(i => i.id === gameState.todaysSpecial)) {
+                total *= 1.3;
+            }
+
+            // Quality affects tip significantly
+            let qualityTipBonus = 0;
+            if (quality >= 90) {
+                qualityTipBonus = 0.30; // 30% extra tip for perfect
+            } else if (quality >= 60) {
+                qualityTipBonus = 0.15; // 15% for good
+            } else if (quality >= 30) {
+                qualityTipBonus = 0.05; // 5% for ok
+            } else {
+                qualityTipBonus = -0.10; // penalty for bad
+            }
+
+            // Calculate base tip from wait time
+            const waitTime = (Date.now() - order.startTime) / 1000;
+            const patienceUsed = waitTime / customer.userData.patience;
+
+            let baseTipPercent = 0;
+            if (patienceUsed < 0.5) {
+                baseTipPercent = typeData.tipRange[1];
+            } else if (patienceUsed < 1) {
+                baseTipPercent = typeData.tipRange[0] + (typeData.tipRange[1] - typeData.tipRange[0]) * (1 - patienceUsed);
+            }
+
+            const tipPercent = (baseTipPercent + qualityTipBonus) * gameState.modifiers.tipMultiplier;
+            const tip = Math.max(0, total * tipPercent);
+
+            gameState.money += total + tip;
+            gameState.customersServed++;
+
+            playSound('coin');
+
+            const qualityText = quality >= 90 ? '✨ ' : quality >= 60 ? '👍 ' : quality < 30 ? '😬 ' : '';
+            showNotification(qualityText + 'Order Complete!', `$${total.toFixed(2)} + $${tip.toFixed(2)} tip`);
+
+            // Handle review (competitive mode)
+            if (gameState.mode === 'competitive') {
+                let reviewScore = 3 + typeData.reviewBias;
+
+                // Quality affects review
+                if (quality >= 90) reviewScore += 2;
+                else if (quality >= 60) reviewScore += 1;
+                else if (quality < 30) reviewScore -= 1;
+
+                // Wait time affects review
+                if (patienceUsed > 0.8) reviewScore -= 1;
+                if (patienceUsed > 1) reviewScore -= 2;
+
+                reviewScore = Math.max(1, Math.min(5, reviewScore));
+                addReview(reviewScore);
+            }
+
+            // Remove customer
+            gameState.activeOrders.splice(orderIndex, 1);
+            animateCustomerLeave(customer);
+
+            updateHUD();
+            updateOrdersDisplay();
+
+            // Check win condition
+            if (gameState.mode === 'competitive' && gameState.money >= CONFIG.WIN_GOAL) {
+                endGame(true);
+            }
+        }
+
+        function completeOrder(orderIndex) {
+            if (orderIndex >= gameState.activeOrders.length) return;
+
+            const order = gameState.activeOrders[orderIndex];
+            const customer = order.customer;
+            const typeData = CUSTOMER_TYPES[customer.userData.type];
+
+            // Calculate payment
+            let total = order.items.reduce((sum, item) => sum + gameState.menuPrices[item.id], 0);
+
+            // Daily special bonus
+            if (gameState.todaysSpecial && order.items.some(i => i.id === gameState.todaysSpecial)) {
+                total *= 1.3;
+            }
+
+            // Calculate tip
+            const waitTime = (Date.now() - order.startTime) / 1000;
+            const patienceUsed = waitTime / customer.userData.patience;
+
+            let tipPercent = 0;
+            if (patienceUsed < 0.5) {
+                tipPercent = typeData.tipRange[1];
+            } else if (patienceUsed < 1) {
+                tipPercent = typeData.tipRange[0] + (typeData.tipRange[1] - typeData.tipRange[0]) * (1 - patienceUsed);
+            }
+
+            tipPercent *= gameState.modifiers.tipMultiplier;
+            const tip = total * tipPercent;
+
+            gameState.money += total + tip;
+            gameState.customersServed++;
+
+            playSound('coin');
+            showNotification('Order Complete!', `$${total.toFixed(2)} + $${tip.toFixed(2)} tip`);
+
+            // Handle review (competitive mode)
+            if (gameState.mode === 'competitive') {
+                let reviewScore = 4 + typeData.reviewBias;
+                if (patienceUsed > 0.8) reviewScore -= 1;
+                if (patienceUsed > 1) reviewScore -= 2;
+                reviewScore = Math.max(1, Math.min(5, reviewScore));
+
+                addReview(reviewScore);
+            }
+
+            // Remove customer
+            gameState.activeOrders.splice(orderIndex, 1);
+            animateCustomerLeave(customer);
+
+            updateHUD();
+            updateOrdersDisplay();
+
+            // Check win condition
+            if (gameState.mode === 'competitive' && gameState.money >= CONFIG.WIN_GOAL) {
+                endGame(true);
+            }
+        }
+
+        function addReview(score) {
+            const oldTotal = gameState.rating * gameState.totalReviews;
+            gameState.totalReviews++;
+            gameState.rating = (oldTotal + score) / gameState.totalReviews;
+            gameState.rating = Math.round(gameState.rating * 10) / 10;
+
+            // Check lose condition
+            if (gameState.rating < 2 && gameState.totalReviews >= 5) {
+                endGame(false, 'Too many bad reviews!');
+            }
+        }
+
+        function animateCustomerLeave(customer) {
+            customer.userData.state = 'leaving';
+
+            const animate = () => {
+                if (!customer.userData) return;
+
+                customer.position.z += 0.05;
+                customer.rotation.y = 0;
+
+                if (customer.position.z > 12) {
+                    scene.remove(customer);
+                    const index = gameState.customers.indexOf(customer);
+                    if (index > -1) gameState.customers.splice(index, 1);
+                } else {
+                    requestAnimationFrame(animate);
+                }
+            };
+
+            animate();
+        }
+
+        function updateCustomers(delta) {
+            gameState.customers.forEach(customer => {
+                if (customer.userData.state === 'waiting') {
+                    customer.userData.timeWaiting += delta;
+
+                    // Check patience (competitive mode)
+                    if (gameState.mode === 'competitive') {
+                        if (customer.userData.timeWaiting > customer.userData.patience) {
+                            // Customer leaves angry
+                            const orderIndex = gameState.activeOrders.findIndex(o => o.customer === customer);
+                            if (orderIndex > -1) {
+                                gameState.activeOrders.splice(orderIndex, 1);
+                                updateOrdersDisplay();
+                            }
+
+                            addReview(1); // Bad review
+                            showNotification('Customer Left!', 'They got tired of waiting!');
+                            animateCustomerLeave(customer);
+                        }
+                    }
+
+                    // Idle animation
+                    customer.position.y = Math.sin(Date.now() * 0.003) * 0.02;
+                }
+            });
+        }
+
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+
+        function updateHUD() {
+            document.getElementById('money-display').textContent = `$${gameState.money.toFixed(0)}`;
+            document.getElementById('rating-display').textContent = gameState.rating.toFixed(1);
+            document.getElementById('served-display').textContent = gameState.customersServed;
+
+            // Check bankruptcy
+            if (gameState.mode === 'competitive' && gameState.money < CONFIG.BANKRUPTCY_THRESHOLD) {
+                endGame(false, 'Bankruptcy!');
+            }
+        }
+
+        function showNotification(title, text) {
+            const notif = document.getElementById('notification');
+            document.getElementById('notif-title').textContent = title;
+            document.getElementById('notif-text').textContent = text;
+
+            notif.style.display = 'block';
+
+            setTimeout(() => {
+                notif.style.display = 'none';
+            }, 2000);
+        }
+
+        function openShop() {
+            document.exitPointerLock();
+            document.getElementById('shop-modal').style.display = 'flex';
+            renderShop();
+        }
+
+        function closeShop() {
+            document.getElementById('shop-modal').style.display = 'none';
+        }
+
+        function renderShop() {
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = '';
+
+            UPGRADES.forEach(upgrade => {
+                const owned = gameState.ownedUpgrades.includes(upgrade.id);
+                const canAfford = gameState.money >= upgrade.price;
+
+                const item = document.createElement('div');
+                item.className = `shop-item ${owned ? 'owned' : ''}`;
+                item.innerHTML = `
+            <div class="shop-item-icon">${upgrade.icon}</div>
+            <div class="shop-item-name">${upgrade.name}</div>
+            <div class="shop-item-desc">${upgrade.desc}</div>
+            <div class="shop-item-price">${owned ? 'Owned' : `$${upgrade.price}`}</div>
+        `;
+
+                if (!owned && canAfford) {
+                    item.addEventListener('click', () => purchaseUpgrade(upgrade));
+                }
+
+                grid.appendChild(item);
+            });
+        }
+
+        function purchaseUpgrade(upgrade) {
+            if (gameState.money < upgrade.price) return;
+            if (gameState.ownedUpgrades.includes(upgrade.id)) return;
+
+            gameState.money -= upgrade.price;
+            gameState.ownedUpgrades.push(upgrade.id);
+
+            // Apply effect
+            const effect = upgrade.effect;
+            if (effect.prepSpeed) gameState.modifiers.prepSpeed = effect.prepSpeed;
+            if (effect.tipMultiplier) gameState.modifiers.tipMultiplier *= effect.tipMultiplier;
+            if (effect.satisfaction) gameState.modifiers.satisfactionMultiplier *= effect.satisfaction;
+            if (effect.dailySpecials) {
+                gameState.modifiers.dailySpecials = true;
+                selectDailySpecial();
+            }
+            if (effect.unlockItem) {
+                const item = MENU_ITEMS.find(i => i.id === effect.unlockItem);
+                if (item) item.unlocked = true;
+            }
+
+            playSound('coin');
+            updateHUD();
+            renderShop();
+        }
+
+        function togglePause() {
+            if (!gameState.isPlaying) return;
+
+            gameState.isPaused = !gameState.isPaused;
+
+            if (gameState.isPaused) {
+                document.exitPointerLock();
+                document.getElementById('pause-menu').style.display = 'flex';
+            } else {
+                document.getElementById('pause-menu').style.display = 'none';
+            }
+        }
+
+        function resumeGame() {
+            gameState.isPaused = false;
+            document.getElementById('pause-menu').style.display = 'none';
+            document.getElementById('shop-modal').style.display = 'none';
+        }
+
+        function restartGame() {
+            // Clean up customers
+            gameState.customers.forEach(c => scene.remove(c));
+            gameState.customers = [];
+            gameState.activeOrders = [];
+
+            document.getElementById('pause-menu').style.display = 'none';
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('shop-modal').style.display = 'none';
+
+            startGame(gameState.mode);
+        }
+
+        function quitToMenu() {
+            gameState.isPlaying = false;
+            gameState.isPaused = false;
+
+            // Clean up customers
+            gameState.customers.forEach(c => scene.remove(c));
+            gameState.customers = [];
+            gameState.activeOrders = [];
+
+            document.getElementById('pause-menu').style.display = 'none';
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('shop-modal').style.display = 'none';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('crosshair').style.display = 'none';
+            document.getElementById('orders-panel').style.display = 'none';
+            document.getElementById('music-panel').style.display = 'none';
+            document.getElementById('mode-indicator').style.display = 'none';
+            document.getElementById('blocker').style.display = 'flex';
+        }
+
+        function endGame(won, reason = '') {
+            gameState.isPlaying = false;
+            document.exitPointerLock();
+
+            const title = document.getElementById('game-over-title');
+            title.textContent = won ? 'You Win!' : 'Game Over';
+            title.className = `game-over-title ${won ? 'win' : 'lose'}`;
+
+            document.getElementById('game-over-stats').innerHTML = `
+        <p>Customers Served: ${gameState.customersServed}</p>
+        <p>Final Balance: $${gameState.money.toFixed(0)}</p>
+        <p>Rating: ${gameState.rating.toFixed(1)} ⭐</p>
+        ${reason ? `<p style="color: #e17055;">${reason}</p>` : ''}
+    `;
+
+            document.getElementById('game-over').style.display = 'flex';
+        }
+
+        // ============================================
+        // INTERACTION DETECTION
+        // ============================================
+
+        function checkInteractionPrompt() {
+            if (!gameState.isPlaying || gameState.isPaused) {
+                document.getElementById('interact-prompt').style.display = 'none';
+                return;
+            }
+
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            let showPrompt = false;
+
+            for (const intersect of intersects) {
+                if (intersect.distance > CONFIG.INTERACTION_DISTANCE) continue;
+
+                let obj = intersect.object;
+                while (obj.parent && !obj.userData.interactable && !obj.userData.type) {
+                    obj = obj.parent;
+                }
+
+                if (obj.userData.interactable || obj.userData.type) {
+                    showPrompt = true;
+                    break;
+                }
+            }
+
+            document.getElementById('interact-prompt').style.display = showPrompt ? 'block' : 'none';
+        }
+
+        // ============================================
+        // ANIMATION LOOP
+        // ============================================
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+
+            if (gameState.isPlaying && !gameState.isPaused) {
+                // Update player movement
+                updateMovement(delta);
+
+                // Update gamepad
+                updateGamepadInput();
+
+                // Update particles
+                updateParticles(delta);
+
+                // Update customers
+                updateCustomers(delta);
+
+                // Check interaction prompt
+                checkInteractionPrompt();
+            }
+
+            // Update mini-game even when game is sort of paused
+            updateMiniGame();
+
+            prevTime = time;
+
+            renderer.render(scene, camera);
+        }
+
+        function updateMovement(delta) {
+            velocity.x -= velocity.x * 10.0 * delta;
+            velocity.z -= velocity.z * 10.0 * delta;
+
+            direction.z = Number(moveForward) - Number(moveBackward);
+            direction.x = Number(moveRight) - Number(moveLeft);
+            direction.normalize();
+
+            if (moveForward || moveBackward) velocity.z -= direction.z * CONFIG.MOVE_SPEED * delta * 10;
+            if (moveLeft || moveRight) velocity.x -= direction.x * CONFIG.MOVE_SPEED * delta * 10;
+
+            // Apply movement in camera direction
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
+
+            const right = new THREE.Vector3();
+            right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
+
+            camera.position.addScaledVector(forward, -velocity.z * delta);
+            camera.position.addScaledVector(right, -velocity.x * delta);
+
+            // Constrain to café bounds
+            camera.position.x = Math.max(-5.5, Math.min(5.5, camera.position.x));
+            camera.position.z = Math.max(-6.5, Math.min(7, camera.position.z));
+            camera.position.y = 1.6; // Keep at standing height
+        }
+
+        // Start the game
+        init();
+    </script>
+</body>
+
+</html>
