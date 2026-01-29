@@ -72,9 +72,28 @@ async function init() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('game-container').appendChild(renderer.domElement);
 
-    updateLoadingProgress(30);
+    updateLoadingProgress(20);
 
-    // Build world
+    // Initialize and load high-quality 3D assets
+    if (typeof initAssetLoader === 'function') {
+        console.log('Initializing asset loader...');
+        initAssetLoader();
+
+        // Load all models before building world
+        await new Promise((resolve) => {
+            loadAllModels(() => {
+                console.log('All models loaded!');
+                resolve();
+            });
+
+            // Timeout fallback in case models fail
+            setTimeout(resolve, 5000);
+        });
+    }
+
+    updateLoadingProgress(50);
+
+    // Build world (will use HQ models if available)
     buildWorld(scene);
 
     // Create falling leaves
@@ -85,7 +104,7 @@ async function init() {
         initPhysics();
     }
 
-    updateLoadingProgress(60);
+    updateLoadingProgress(70);
 
     // Collect interactable objects
     scene.traverse(obj => {

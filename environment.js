@@ -696,17 +696,18 @@ function createOutdoorSeating(scene) {
     ];
 
     tablePositions.forEach(pos => {
-        const table = createOutdoorTable();
+        // Use HQ models if available
+        const table = typeof createHQTable === 'function' ? createHQTable() : createOutdoorTable();
         table.position.set(pos.x, 0, pos.z);
         seatingGroup.add(table);
 
-        // Chairs facing table (2 per table)
-        const chair1 = createOutdoorChair();
+        // Chairs facing table (2 per table) - use HQ models
+        const chair1 = typeof createHQChair === 'function' ? createHQChair() : createOutdoorChair();
         chair1.position.set(pos.x - 0.6, 0, pos.z);
         chair1.rotation.y = Math.PI / 2; // Face inward
         seatingGroup.add(chair1);
 
-        const chair2 = createOutdoorChair();
+        const chair2 = typeof createHQChair === 'function' ? createHQChair() : createOutdoorChair();
         chair2.position.set(pos.x + 0.6, 0, pos.z);
         chair2.rotation.y = -Math.PI / 2; // Face inward
         seatingGroup.add(chair2);
