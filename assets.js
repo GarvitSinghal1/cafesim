@@ -8,21 +8,25 @@ const AssetManager = {
     loader: null,
     dracoLoader: null,
     loadedModels: {},
+    // CDN-hosted models from KhronosGroup glTF-Sample-Assets (CC0/CC-BY)
     modelPaths: {
-        // Update these paths when you have the actual models
-        // Example: cafe: 'assets/models/cafe.glb',
+        // Direct CDN links - no download needed!
+        chair: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb',
+        plant: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DiffuseTransmissionPlant/glTF-Binary/DiffuseTransmissionPlant.glb',
+        teacup: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DiffuseTransmissionTeacup/glTF-Binary/DiffuseTransmissionTeacup.glb',
+        character: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/RiggedFigure/glTF-Binary/RiggedFigure.glb',
+        // Local paths (for downloaded models)
         cafe: null,
         espressoMachine: null,
         coffeeCup: null,
         table: null,
-        chair: null,
         tree: null,
-        customer: null,
         pastry: null,
         counter: null
     },
     pendingLoads: 0,
-    onLoadComplete: null
+    onLoadComplete: null,
+    loadProgress: {}
 };
 
 // Initialize the GLTF loader
@@ -142,19 +146,34 @@ function setModelPath(name, path) {
 function createHQEspressoMachine() {
     if (hasModel('espressoMachine')) {
         const model = getModel('espressoMachine');
-        model.scale.setScalar(0.5); // Adjust scale as needed
+        model.scale.setScalar(0.5);
+        enableShadows(model);
         return model;
     }
 
     // Fallback: use the procedural version
-    return createEspressoMachine();
+    if (typeof createEspressoMachine === 'function') {
+        return createEspressoMachine();
+    }
+
+    // Mini fallback
+    const machine = new THREE.Group();
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.5, 0.4),
+        new THREE.MeshStandardMaterial({ color: 0xcc2222, metalness: 0.8, roughness: 0.3 })
+    );
+    body.position.y = 0.25;
+    machine.add(body);
+    return machine;
 }
 
 // Create a high-quality or fallback coffee cup
 function createHQCoffeeCup() {
-    if (hasModel('coffeeCup')) {
-        const model = getModel('coffeeCup');
-        model.scale.setScalar(0.08);
+    if (hasModel('teacup')) {
+        const model = getModel('teacup');
+        model.scale.setScalar(0.15);
+        centerModel(model);
+        enableShadows(model);
         return model;
     }
 
@@ -182,23 +201,92 @@ function createHQTable() {
     if (hasModel('table')) {
         const model = getModel('table');
         model.scale.setScalar(1);
+        enableShadows(model);
         return model;
     }
 
     // Fallback
-    return createOutdoorTable();
+    if (typeof createOutdoorTable === 'function') {
+        return createOutdoorTable();
+    }
+
+    // Mini fallback - simple table
+    const table = new THREE.Group();
+    const top = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.4, 0.05, 16),
+        new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+    );
+    top.position.y = 0.7;
+    table.add(top);
+
+    const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 0.7, 8),
+        new THREE.MeshStandardMaterial({ color: 0x333333 })
+    );
+    leg.position.y = 0.35;
+    table.add(leg);
+    return table;
 }
 
 // Create a high-quality or fallback chair
 function createHQChair() {
     if (hasModel('chair')) {
         const model = getModel('chair');
-        model.scale.setScalar(1);
+        model.scale.setScalar(0.8);
+        centerModel(model);
+        enableShadows(model);
         return model;
     }
 
     // Fallback
-    return createOutdoorChair();
+    if (typeof createOutdoorChair === 'function') {
+        return createOutdoorChair();
+    }
+
+    // Mini fallback - simple chair
+    const chair = new THREE.Group();
+    const seat = new THREE.Mesh(
+        new THREE.BoxGeometry(0.4, 0.05, 0.4),
+        new THREE.MeshStandardMaterial({ color: 0x666666 })
+    );
+    seat.position.y = 0.45;
+    chair.add(seat);
+
+    const back = new THREE.Mesh(
+        new THREE.BoxGeometry(0.4, 0.4, 0.05),
+        new THREE.MeshStandardMaterial({ color: 0x666666 })
+    );
+    back.position.set(0, 0.65, -0.175);
+    chair.add(back);
+    return chair;
+}
+
+// Create a high-quality or fallback plant
+function createHQPlant() {
+    if (hasModel('plant')) {
+        const model = getModel('plant');
+        model.scale.setScalar(0.5);
+        centerModel(model);
+        enableShadows(model);
+        return model;
+    }
+
+    // Fallback - simple potted plant
+    const plant = new THREE.Group();
+    const pot = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.1, 0.15, 12),
+        new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+    );
+    pot.position.y = 0.075;
+    plant.add(pot);
+
+    const foliage = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 12, 12),
+        new THREE.MeshStandardMaterial({ color: 0x228B22 })
+    );
+    foliage.position.y = 0.25;
+    plant.add(foliage);
+    return plant;
 }
 
 // Create a high-quality or fallback tree
@@ -206,27 +294,46 @@ function createHQTree() {
     if (hasModel('tree')) {
         const model = getModel('tree');
         model.scale.setScalar(2);
+        enableShadows(model);
         return model;
     }
 
     // Fallback
-    return createMapleTree();
+    if (typeof createMapleTree === 'function') {
+        return createMapleTree();
+    }
+
+    // Mini fallback
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.2, 2, 8),
+        new THREE.MeshStandardMaterial({ color: 0x5C4033 })
+    );
+    trunk.position.y = 1;
+    tree.add(trunk);
+
+    const leaves = new THREE.Mesh(
+        new THREE.SphereGeometry(1.5, 12, 12),
+        new THREE.MeshStandardMaterial({ color: 0xCC4400 })
+    );
+    leaves.position.y = 3;
+    tree.add(leaves);
+    return tree;
 }
 
 // Create a high-quality or fallback customer
 function createHQCustomer(color) {
-    if (hasModel('customer')) {
-        const model = getModel('customer');
-        model.scale.setScalar(1);
+    if (hasModel('character')) {
+        const model = getModel('character');
+        model.scale.setScalar(0.8);
+        centerModel(model);
+        enableShadows(model);
 
         // Try to colorize clothing
         model.traverse(child => {
             if (child.isMesh && child.material) {
-                if (child.name.toLowerCase().includes('clothes') ||
-                    child.name.toLowerCase().includes('shirt')) {
-                    child.material = child.material.clone();
-                    child.material.color.setHex(color);
-                }
+                child.material = child.material.clone();
+                child.material.color.setHex(color);
             }
         });
 
@@ -234,7 +341,26 @@ function createHQCustomer(color) {
     }
 
     // Fallback: procedural NPC
-    return createCustomerNPC(color);
+    if (typeof createCustomerNPC === 'function') {
+        return createCustomerNPC(color);
+    }
+
+    // Mini fallback
+    const npc = new THREE.Group();
+    const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.25, 1, 8),
+        new THREE.MeshStandardMaterial({ color: color })
+    );
+    body.position.y = 0.5;
+    npc.add(body);
+
+    const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 12, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf5d0c5 })
+    );
+    head.position.y = 1.2;
+    npc.add(head);
+    return npc;
 }
 
 // ============================================
