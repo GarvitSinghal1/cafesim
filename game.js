@@ -637,10 +637,41 @@ function serveToCustomer(customerObj) {
     const held = physicsState.grabbedObject;
     const heldType = held.userData.itemType;
 
-    // Find customer's order
-    const orderIndex = gameState.activeOrders.findIndex(o => o.customer === customerObj);
+    // Make sure we have the root customer object
+    let customer = customerObj;
+    while (customer.parent && customer.parent !== scene) {
+        if (customer.userData && customer.userData.type === 'customer') break;
+        customer = customer.parent;
+    }
+
+    // Check if customer is still entering
+    if (customer.userData && customer.userData.state === 'entering') {
+        showNotification('Wait!', 'Customer is still walking to counter');
+        return;
+    }
+
+    // Find customer's order - match by userData.order reference or direct customer match
+    let orderIndex = gameState.activeOrders.findIndex(o => o.customer === customer);
+
+    // If not found, try to find by customer position (fallback)
     if (orderIndex === -1) {
-        showNotification('No order!', 'This customer has no order');
+        // Also check if any order has this customer in the list
+        for (let i = 0; i < gameState.activeOrders.length; i++) {
+            const order = gameState.activeOrders[i];
+            if (order.customer && order.customer.uuid === customer.uuid) {
+                orderIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (orderIndex === -1) {
+        // Debug: Check if customer has an order but isn't in activeOrders
+        if (customer.userData && customer.userData.order) {
+            showNotification('Order pending', 'Wait for customer to reach counter');
+        } else {
+            showNotification('No order!', 'This customer has no order');
+        }
         return;
     }
 
